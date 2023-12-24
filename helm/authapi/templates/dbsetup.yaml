@@ -30,7 +30,7 @@ spec:
           - start.sh
           - python
           - -m
-          - auth_api
+          - authapi
           - db
           - upgrade
       restartPolicy: Never
