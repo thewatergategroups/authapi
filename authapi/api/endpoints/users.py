@@ -8,7 +8,7 @@ from ...database.models import UserModel, UserScopeModel
 from ..schemas import AuthData, UserScopesData
 from ..tools import blake2b_hash
 
-router = APIRouter(prefix="/users")
+router = APIRouter(prefix="/users", tags=["users"])
 
 
 @router.post("/create")

@@ -6,7 +6,7 @@ from ..deps import get_async_session
 from ...database.models import ScopesModel
 from ..schemas import ScopeData
 
-router = APIRouter(prefix="/scopes")
+router = APIRouter(prefix="/scopes", tags=["scopes"])
 
 
 @router.post("/create")

@@ -7,7 +7,7 @@ from ...database.models import UserModel
 from ..schemas import AuthData
 from ..tools import blake2b_hash
 
-router = APIRouter(prefix="/public")
+router = APIRouter(prefix="/public", tags=["public"])
 
 
 @router.post("/auth")
