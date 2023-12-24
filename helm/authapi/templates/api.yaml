@@ -1,0 +1,68 @@
+---
+# Source: auth/templates/deployment.yaml
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: authapi
+  namespace: {{ $.Release.Namespace }}
+  labels: {}
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: authapi
+  template:
+    metadata:
+      labels:
+        app: authapi
+    spec:
+      securityContext: {}
+      imagePullSecrets:
+        - name: {{ .Values.regCredName }} 
+      containers:
+        - name: authapi
+          volumeMounts:
+            - mountPath: /secrets
+              name: authapi
+          securityContext: null
+          image: {{ .Values.imageName }}
+          imagePullPolicy: Always
+          ports:
+            - name: http
+              containerPort: 8000
+              protocol: TCP
+          resources:
+            limits:
+              memory: 500Mi
+            requests:
+              memory: 500Mi
+          command:
+            - bash
+            - start.sh  
+            - python
+            - -m
+            - authapi
+            - api
+      volumes:
+        - name: authapi
+          secret:
+            optional: false
+            secretName: authapi
+
+---
+# Source: auth/templates/service.yaml
+apiVersion: v1
+kind: Service
+metadata:
+  name: authapi
+  namespace: {{ $.Release.Namespace }}
+  labels: {}
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8000
+      targetPort: http
+      protocol: TCP
+      name: http
+  selector:
+    app: authapi

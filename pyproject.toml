@@ -1,0 +1,50 @@
+[tool.poetry]
+name = "authapi"
+version = "0.1.0"
+description = ""
+authors = ["Ciaran <ciaranmckey@gmail.com>"]
+
+
+[tool.poetry.dependencies]
+python = "~3.11"
+pydantic = "^1.10.11"
+numpy = "^1.25.1"
+fastapi = "^0.100.0"
+uvicorn = "^0.23.1"
+sqlalchemy = "^2.0.19"
+alembic = "^1.11.2"
+psycopg2-binary = "^2.9.7"
+trekkers = { version = "*", source = "kube" }
+
+[tool.poetry.group.dev.dependencies]
+mypy = "^1.4.1"
+pylint = "^2.17.4"
+ruff = "^0.0.278"
+black = "^23.7.0"
+pytest = "^7.4.0"
+types-requests = "^2.31.0.1"
+ipykernel = "^6.25.2"
+
+
+[[tool.poetry.source]]
+name = "kube"
+url = "http://10.252.1.0:30500/simple"
+priority = "explicit"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
+
+[tool.mypy]
+plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+module = ["alpaca.*", "matplotlib.*"]
+ignore_missing_imports = true
+
+[tool.ruff]
+# https://beta.ruff.rs/docs/rules/
+select = ["E", "PLE", "F", "W605", "S", "RUF"]
+ignore = ["S104"]
+exclude = ["tests"]
+show-fixes = true
