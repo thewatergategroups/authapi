@@ -17,6 +17,7 @@ def validate_jwt(auth: Annotated[HTTPAuthorizationCredentials, Depends(HTTPBeare
                 key=signing_key.key,
                 algorithms=[value.value for value in Alg],
                 audience="local",
+                issuer="authapi",
             )
         )
         return UserInfo(username=jwt.sub, scopes=jwt.scopes)

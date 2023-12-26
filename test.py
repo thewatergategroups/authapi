@@ -1,5 +1,5 @@
-from authapi.certificates import generate_and_save_private_key, Alg
+from authapi.schemas import Alg
 
 
-generate_and_save_private_key(Alg.RSA)
-generate_and_save_private_key(Alg.EC)
+Alg.RSA.generate_and_save_private_key()
+Alg.EC.generate_and_save_private_key()

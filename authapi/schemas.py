@@ -14,8 +14,8 @@ class Jwt(BaseModel):
     sub: str
     scopes: list[str]
     exp: int
-    # iat:str
-    # iss:str
+    iat: float
+    iss: str
     # jti:str
 
 

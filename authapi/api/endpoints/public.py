@@ -41,12 +41,14 @@ async def get_token(
             raise HTTPException(
                 status.HTTP_401_UNAUTHORIZED, "user does not have requested scope"
             )
-
+    now = datetime.now()
     payload = {
         "sub": data.username,
-        "exp": (datetime.now() + timedelta(hours=1)).timestamp(),
+        "exp": (now + timedelta(hours=1)).timestamp(),
         "scopes": data.scopes,
         "aud": "local",
+        "iss": "authapi",
+        "iat": now.timestamp(),
     }
     return {
         "token": jwt.encode(
