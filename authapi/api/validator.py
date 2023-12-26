@@ -3,31 +3,15 @@ from typing import Annotated
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jwt import decode
-from pydantic import BaseModel
 from .deps import get_jwks_client
-from ..certificates import Alg
-
-
-class JWT(BaseModel):
-    aud: str
-    sub: str
-    scopes: list[str]
-    exp: int | None = None
-    # client:str | None = None
-    # iat:str
-    # iss:str
-    # jti:str
-
-
-class UserInfo(BaseModel):
-    username: str
-    scopes: list[str]
+from ..schemas import Alg, Jwt
+from .schemas import UserInfo
 
 
 def validate_jwt(auth: Annotated[HTTPAuthorizationCredentials, Depends(HTTPBearer())]):
     try:
         signing_key = get_jwks_client().get_signing_key_from_jwt(auth.credentials)
-        jwt = JWT(
+        jwt = Jwt(
             **decode(
                 auth.credentials,
                 key=signing_key.key,

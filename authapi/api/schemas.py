@@ -1,5 +1,10 @@
 from pydantic import BaseModel
-from ..certificates import Alg
+from ..schemas import Alg
+
+
+class UserInfo(BaseModel):
+    username: str
+    scopes: list[str]
 
 
 class UserScopesData(BaseModel):

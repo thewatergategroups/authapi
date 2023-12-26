@@ -10,7 +10,7 @@ from ..deps import get_async_session
 from ...database.models import UserModel, UserScopeModel
 from ..schemas import AuthData
 from ..tools import blake2b_hash
-from ...certificates import Alg, load_private_key, load_public_key
+from ...schemas import Alg
 
 router = APIRouter(prefix="/public", tags=["public"])
 
@@ -42,7 +42,6 @@ async def get_token(
                 status.HTTP_401_UNAUTHORIZED, "user does not have requested scope"
             )
 
-    private_key = load_private_key(data.alg)
     payload = {
         "sub": data.username,
         "exp": (datetime.now() + timedelta(hours=1)).timestamp(),
@@ -52,9 +51,9 @@ async def get_token(
     return {
         "token": jwt.encode(
             payload,
-            private_key,
+            data.alg.load_private_key(),
             algorithm=data.alg.value,
-            headers={"kid": load_public_key(data.alg)["kid"]},
+            headers={"kid": data.alg.load_public_key()["kid"]},
         )
     }
 
