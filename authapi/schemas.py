@@ -1,12 +1,14 @@
 import base64
 from functools import lru_cache
 from pydantic import BaseModel
-from uuid import uuid4
 from cryptography.hazmat.primitives.asymmetric import rsa, ec
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
+from sqlalchemy import insert, select
 from .settings import get_settings
 from enum import StrEnum
+from .settings import get_sync_sessionm
+from .database.models import CertModel
 
 
 class Jwt(BaseModel):
@@ -30,7 +32,7 @@ class Jwk(BaseModel):
 
     @classmethod
     def get(cls, *args, **kwargs):
-        raise NotImplementedError("Not yet implemented for this class")
+        return cls(kty="JWT", kid="123", use="none")
 
     @staticmethod
     def generate_pk():
@@ -47,7 +49,7 @@ class EcJwk(Jwk):
     def get(cls, public_numbers: ec.EllipticCurvePublicNumbers):
         return cls(
             kty="EC",
-            kid=str(uuid4()),
+            kid=Alg.EC.value,
             use="sig",
             alg=Alg.EC.value,
             crv="P-256",
@@ -69,7 +71,7 @@ class RsaJwk(Jwk):
     def get(cls, public_numbers: rsa.RSAPublicNumbers):
         return cls(
             kty="RSA",
-            kid=str(uuid4()),
+            kid=Alg.RSA.value,
             use="sig",
             alg=Alg.RSA.value,
             n=cls.encode(public_numbers.n),
@@ -88,7 +90,7 @@ class Alg(StrEnum):
         super().__init__()
         self.alg = algorithm
         maps = {"ES256": EcJwk, "RS256": RsaJwk}
-        self.model = maps.get(self.value, Jwk)
+        self.model: Jwk = maps.get(self.value, Jwk)
 
     EC = "ES256"
     RSA = "RS256"
@@ -100,14 +102,13 @@ class Alg(StrEnum):
 
     @lru_cache
     def load_private_key(self):
-        with open(f"{get_settings().certs_folder}/{self.value}.pem", "rb") as f:
-            private_pem = f.read()
-
-        private_key = serialization.load_pem_private_key(
-            private_pem, password=None, backend=default_backend()
+        with get_sync_sessionm().begin() as session:
+            cert = session.scalar(select(CertModel).where(CertModel.alg == self.alg))
+        if not cert:
+            raise ValueError(f"missing certificate for algorithm {self.alg}")
+        return serialization.load_pem_private_key(
+            cert.cert, password=None, backend=default_backend()
         )
-
-        return private_key
 
     @lru_cache
     def load_public_key(self):
@@ -116,12 +117,11 @@ class Alg(StrEnum):
         public_numbers = public_key.public_numbers()
         return self.model.get(public_numbers).dict()
 
-    def generate_and_save_private_key(self):
+    def generate_private_key(self):
         private_key = self.model.generate_pk()
         private_pem = private_key.private_bytes(
             encoding=serialization.Encoding.PEM,
             format=serialization.PrivateFormat.TraditionalOpenSSL,
             encryption_algorithm=serialization.NoEncryption(),
         )
-        with open(f"{get_settings().certs_folder}/{self.value}.pem", "wb") as f:
-            f.write(private_pem)
+        return private_pem

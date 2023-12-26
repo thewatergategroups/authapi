@@ -3,6 +3,13 @@ from sqlalchemy.orm import Mapped, mapped_column
 from trekkers import BaseSql
 
 
+class CertModel(BaseSql):
+    __tablename__ = "certs"
+    __table_args__ = {"schema": "auth"}
+    alg: Mapped[str] = mapped_column(primary_key=True)
+    cert: Mapped[bytes]
+
+
 class UserModel(BaseSql):
     __tablename__ = "users"
     __table_args__ = {"schema": "auth"}
