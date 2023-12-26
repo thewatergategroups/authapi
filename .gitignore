@@ -8,3 +8,4 @@
 **/logs/*
 **/pg_data
 **/pgadmin-data
+**/certs/*

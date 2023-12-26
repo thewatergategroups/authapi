@@ -5,8 +5,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from ..deps import get_async_session
 from ...database.models import ScopesModel
 from ..schemas import ScopeData
+from ..validator import has_admin_scope, validate_jwt
 
-router = APIRouter(prefix="/scopes", tags=["scopes"])
+router = APIRouter(
+    prefix="/scopes",
+    tags=["scopes"],
+    dependencies=[Depends(validate_jwt), Depends(has_admin_scope())],
+)
 
 
 @router.post("/create")

@@ -1,4 +1,5 @@
 from pydantic import BaseModel
+from ..certificates import Alg
 
 
 class UserScopesData(BaseModel):
@@ -9,7 +10,13 @@ class UserScopesData(BaseModel):
 class AuthData(BaseModel):
     username: str
     password: str
+    alg: Alg = Alg.EC
+    scopes: list[str]
 
 
 class ScopeData(BaseModel):
     scope: str
+
+
+class Token(BaseModel):
+    token: str

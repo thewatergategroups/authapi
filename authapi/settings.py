@@ -13,6 +13,8 @@ class Settings(BaseSettings):
     """Application Settings"""
 
     salt: str = ""
+    certs_folder: str = "./certs"
+    jwks_server_url: str = "http://0.0.0.0:8000"
     log_level: str = "INFO"
     db_settings: DbSettings = DbSettings(
         env_script_location=f"{TOP_LEVEL_PATH}/database/alembic"
