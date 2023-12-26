@@ -5,6 +5,7 @@ from cryptography.hazmat.primitives.asymmetric import rsa, ec
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from sqlalchemy import insert, select
+from sqlalchemy.orm import Session
 from .settings import get_settings
 from enum import StrEnum
 from .settings import get_sync_sessionm
@@ -104,11 +105,11 @@ class Alg(StrEnum):
     def load_private_key(self):
         with get_sync_sessionm().begin() as session:
             cert = session.scalar(select(CertModel).where(CertModel.alg == self.alg))
-        if not cert:
-            raise ValueError(f"missing certificate for algorithm {self.alg}")
-        return serialization.load_pem_private_key(
-            cert.cert, password=None, backend=default_backend()
-        )
+            if not cert:
+                raise ValueError(f"missing certificate for algorithm {self.alg}")
+            return serialization.load_pem_private_key(
+                cert.cert, password=None, backend=default_backend()
+            )
 
     @lru_cache
     def load_public_key(self):
@@ -125,3 +126,6 @@ class Alg(StrEnum):
             encryption_algorithm=serialization.NoEncryption(),
         )
         return private_pem
+
+    def insert_cert(self, session: Session, private_pem: bytes):
+        session.execute(insert(CertModel).values(alg=self.value, cert=private_pem))

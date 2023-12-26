@@ -10,6 +10,7 @@ from typing import Sequence, Union
 from alembic import op
 import sqlalchemy as sa
 from authapi.schemas import Alg
+from sqlalchemy import orm
 
 # revision identifiers, used by Alembic.
 revision: str = "6246ce2fa579"
@@ -27,12 +28,10 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("alg"),
         schema="auth",
     )
+    bind = op.get_bind()
+    session = orm.Session(bind=bind)
     for alg in Alg:
-        op.execute(
-            sa.text(
-                f"INSERT INTO auth.certs (alg,cert) VALUES ('{alg.value}','{alg.generate_private_key()}')"
-            )
-        )
+        alg.insert_cert(session, alg.generate_private_key())
     # ### end Alembic commands ###
 
 
