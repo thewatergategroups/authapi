@@ -1,11 +1,11 @@
 import logging
 from fastapi import Depends, HTTPException
 from fastapi.routing import APIRouter
-from sqlalchemy import exists, insert, select
+from sqlalchemy import exists, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from ..deps import get_async_session
 from ...database.models import UserModel, UserScopeModel
-from ..schemas import AuthData, UserScopesData
+from ..schemas import AuthData, AuthUpdate, UserScopesData
 from ..tools import blake2b_hash
 from ..validator import validate_jwt, has_admin_scope
 
@@ -30,6 +30,27 @@ async def create_user(
 
     await session.execute(
         insert(UserModel).values(username=data.username, pwd_hash=passwd)
+    )
+
+    return {"detail": "success"}
+
+
+@router.post("/update")
+async def update_user(
+    data: AuthUpdate,
+    session: AsyncSession = Depends(get_async_session),
+):
+    passwd = blake2b_hash(data.password)
+    us_exists = await session.scalar(
+        select(exists(UserModel)).where(UserModel.username == data.username)
+    )
+    if not us_exists:
+        raise HTTPException(400, "User already Exists")
+
+    await session.execute(
+        update(UserModel)
+        .where(UserModel.username == data.username)
+        .values(pwd_hash=passwd)
     )
 
     return {"detail": "success"}

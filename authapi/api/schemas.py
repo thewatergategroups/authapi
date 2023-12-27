@@ -12,6 +12,11 @@ class UserScopesData(BaseModel):
     scope: str
 
 
+class AuthUpdate(BaseModel):
+    username: str
+    password: str
+
+
 class AuthData(BaseModel):
     username: str
     password: str
