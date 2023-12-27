@@ -1,6 +1,6 @@
 import logging
 from typing import Annotated
-from fastapi import Depends, HTTPException, status
+from fastapi import Cookie, Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from jwt import decode
 from .deps import get_jwks_client
@@ -8,12 +8,18 @@ from ..schemas import Alg, Jwt
 from .schemas import UserInfo
 
 
-def validate_jwt(auth: Annotated[HTTPAuthorizationCredentials, Depends(HTTPBearer())]):
+def validate_jwt(
+    auth: Annotated[
+        HTTPAuthorizationCredentials | None, Depends(HTTPBearer(auto_error=False))
+    ],
+    token: Annotated[str | None, Cookie()] = None,
+):
     try:
-        signing_key = get_jwks_client().get_signing_key_from_jwt(auth.credentials)
+        credentials = auth.credentials if auth else token
+        signing_key = get_jwks_client().get_signing_key_from_jwt(credentials)
         jwt = Jwt(
             **decode(
-                auth.credentials,
+                credentials,
                 key=signing_key.key,
                 algorithms=[value.value for value in Alg],
                 audience="local",
