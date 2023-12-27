@@ -35,7 +35,7 @@ async def create_user(
     return {"detail": "success"}
 
 
-@router.post("/update")
+@router.patch("/update")
 async def update_user(
     data: AuthUpdate,
     session: AsyncSession = Depends(get_async_session),
