@@ -25,9 +25,9 @@ down:
 
 
 push: build
-	docker tag $(REPOSITORY):latest ghcr.io/1ndistinct/authapi:latest
-	docker push  ghcr.io/1ndistinct/authapi:latest
+	docker tag $(REPOSITORY):latest ghcr.io/1ndistinct/$(REPOSITORY):latest
+	docker push  ghcr.io/1ndistinct/$(REPOSITORY):latest
 
 template:
 	if [ ! -f secret_vals.yaml ]; then echo "secrets: {}" > secret_vals.yaml; fi
-	helm template ./helm/${PROJECT}-local -f secret_vals.yaml --debug > template.yaml
+	helm template ./helm/$(REPOSITORY) -f secret_vals.yaml --debug > template.yaml
