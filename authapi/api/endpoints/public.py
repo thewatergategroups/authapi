@@ -36,11 +36,13 @@ async def get_token(
             )
         )
     ).all()
-    for key in data.scopes:
-        if key not in scopes:
-            raise HTTPException(
-                status.HTTP_401_UNAUTHORIZED, "user does not have requested scope"
-            )
+    allowed_scopes = [scope for scope in data.scopes if scope in scopes]
+
+    if not allowed_scopes:
+        raise HTTPException(
+            status.HTTP_401_UNAUTHORIZED,
+            "user does not have any of the requested scope",
+        )
     now = datetime.now()
     payload = {
         "sub": data.username,
