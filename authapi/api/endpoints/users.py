@@ -3,7 +3,7 @@ from fastapi import Depends, HTTPException
 from fastapi.routing import APIRouter
 from sqlalchemy import exists, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from ..deps import get_async_session
+from ...deps import get_async_session
 from ...database.models import UserModel, UserScopeModel
 from ..schemas import AuthData, AuthUpdate, UserScopesData
 from ..tools import blake2b_hash

@@ -8,7 +8,6 @@ services:
       - dbsetup
     volumes:
       - ./authapi:/app/authapi
-      - ./certs:/certs
     env_file:
       - .env
     network_mode: host

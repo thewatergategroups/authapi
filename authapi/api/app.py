@@ -5,15 +5,15 @@ from .endpoints.users import router as users_router
 from .endpoints.scopes import router as scopes_router
 
 from fastapi.middleware.cors import CORSMiddleware
-from ..tools import setup_logging
 from ..settings import get_settings
+from yumi import setup_logging
 
 
 def create_app() -> FastAPI:
     """
     create and return fastapi app
     """
-    setup_logging(get_settings())
+    setup_logging(get_settings().log_config)
     app = FastAPI(
         title="Auth Api",
         description="Jwks Authentication API",

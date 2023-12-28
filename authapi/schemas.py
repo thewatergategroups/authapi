@@ -6,20 +6,10 @@ from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
 from sqlalchemy import insert, select
 from sqlalchemy.orm import Session
-from .settings import get_settings
 from enum import StrEnum
-from .settings import get_sync_sessionm
+from .deps import get_sync_sessionm
 from .database.models import CertModel
-
-
-class Jwt(BaseModel):
-    aud: str
-    sub: str
-    scopes: list[str]
-    exp: int
-    iat: float
-    iss: str
-    # jti:str
+from yumi import Algorithms
 
 
 class Jwk(BaseModel):
@@ -90,11 +80,11 @@ class Alg(StrEnum):
     def __init__(self, algorithm: str):
         super().__init__()
         self.alg = algorithm
-        maps = {"ES256": EcJwk, "RS256": RsaJwk}
+        maps = {Algorithms.EC.value: EcJwk, Algorithms.RSA.value: RsaJwk}
         self.model: Jwk = maps.get(self.value, Jwk)
 
-    EC = "ES256"
-    RSA = "RS256"
+    EC = Algorithms.EC.value
+    RSA = Algorithms.RSA.value
 
     @classmethod
     @lru_cache

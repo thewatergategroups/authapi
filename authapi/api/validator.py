@@ -1,11 +1,8 @@
-import logging
 from typing import Annotated
 from fastapi import Cookie, Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from jwt import decode
-from .deps import get_jwks_client
-from ..schemas import Alg, Jwt
-from .schemas import UserInfo
+from yumi import NotAuthorized, Scopes, UserInfo
+from ..deps import get_jwt_client
 
 
 def validate_jwt(
@@ -15,32 +12,20 @@ def validate_jwt(
     token: Annotated[str | None, Cookie()] = None,
 ):
     try:
-        credentials = auth.credentials if auth else token
-        signing_key = get_jwks_client().get_signing_key_from_jwt(credentials)
-        jwt = Jwt(
-            **decode(
-                credentials,
-                key=signing_key.key,
-                algorithms=[value.value for value in Alg],
-                audience="local",
-                issuer="authapi",
-            )
-        )
-        return UserInfo(username=jwt.sub, scopes=jwt.scopes)
-    except Exception as exc:
-        logging.exception("failed to decode jwt")
+        get_jwt_client().validate_jwt(auth.credentials if auth else token)
+    except NotAuthorized as exc:
         raise HTTPException(
             status.HTTP_401_UNAUTHORIZED, "could not verify token"
         ) from exc
 
 
 def has_admin_scope():
-    return has_scope("admin")
+    return has_scope(Scopes.ADMIN)
 
 
-def has_scope(scope: str):
+def has_scope(scope: Scopes):
     def _has_scope(user_info: Annotated[UserInfo, Depends(validate_jwt)]):
-        if scope not in user_info.scopes:
+        if scope.value not in user_info.scopes:
             raise HTTPException(status.HTTP_403_FORBIDDEN)
         return user_info
 

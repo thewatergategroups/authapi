@@ -1827,7 +1827,27 @@ files = [
     {file = "wrapt-1.16.0.tar.gz", hash = "sha256:5f370f952971e7d17c7d1ead40e49f32345a7f7a5373571ef44d800d06b1899d"},
 ]
 
+[[package]]
+name = "yumi"
+version = "0.1.0"
+description = "helper package"
+optional = false
+python-versions = ">=3.11,<3.12"
+files = [
+    {file = "yumi-0.1.0-py3-none-any.whl", hash = "sha256:2654d6d3fe381e116eb9b4f6973d5bad63bc97d986ceb18d2dc6d3cc5eec112c"},
+    {file = "yumi-0.1.0.tar.gz", hash = "sha256:2c7e1b2933ac6745a3a64715f463aa02271cbb66a6f379ec2cfd132e62f080e1"},
+]
+
+[package.dependencies]
+pydantic = ">=1.10.11,<2.0.0"
+pyjwt = ">=2.8.0,<3.0.0"
+
+[package.source]
+type = "legacy"
+url = "http://10.252.1.0:30500/simple"
+reference = "kube"
+
 [metadata]
 lock-version = "2.0"
 python-versions = "~3.11"
-content-hash = "ed5021ce2194154173d65db501ff54f6477c7696892ba62cd1c44b5fee087c3d"
+content-hash = "d36f79f46ee320f86db5d268053be5bd73ef5f4405b118d049df217b1e56f9e9"

@@ -1,12 +1,10 @@
 from datetime import datetime, timedelta
-import logging
-import time
 from fastapi import Depends, HTTPException, status
 from fastapi.routing import APIRouter
 import jwt
 from sqlalchemy import exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from ..deps import get_async_session
+from ...deps import get_async_session
 from ...database.models import UserModel, UserScopeModel
 from ..schemas import AuthData
 from ..tools import blake2b_hash
