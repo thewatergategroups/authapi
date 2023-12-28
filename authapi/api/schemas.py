@@ -1,5 +1,5 @@
 from pydantic import BaseModel
-from yumi import Algorithms
+from ..schemas import Alg
 
 
 class UserScopesData(BaseModel):
@@ -15,7 +15,7 @@ class AuthUpdate(BaseModel):
 class AuthData(BaseModel):
     username: str
     password: str
-    alg: Algorithms = Algorithms.EC
+    alg: Alg = Alg.EC
     scopes: list[str]
 
 
