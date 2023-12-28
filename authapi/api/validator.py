@@ -10,9 +10,9 @@ def validate_jwt(
         HTTPAuthorizationCredentials | None, Depends(HTTPBearer(auto_error=False))
     ],
     token: Annotated[str | None, Cookie()] = None,
-):
+) -> UserInfo:
     try:
-        get_jwt_client().validate_jwt(auth.credentials if auth else token)
+        return get_jwt_client().validate_jwt(auth.credentials if auth else token)
     except NotAuthorized as exc:
         raise HTTPException(
             status.HTTP_401_UNAUTHORIZED, "could not verify token"
