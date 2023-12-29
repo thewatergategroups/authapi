@@ -3,6 +3,7 @@ from fastapi import Depends, HTTPException
 from fastapi.routing import APIRouter
 from sqlalchemy import exists, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
+from yumi import UserInfo
 from ...deps import get_async_session
 from ...database.models import UserModel, UserScopeModel
 from ..schemas import AuthData, AuthUpdate, UserScopesData
@@ -57,7 +58,7 @@ async def update_user(
 
 
 @router.get("")
-async def get_user(session: AsyncSession = Depends(get_async_session)):
+async def get_users(session: AsyncSession = Depends(get_async_session)):
     users = (await session.scalars(select(UserModel.username))).all()
     return users
 
@@ -74,7 +75,7 @@ async def add_user_scopes(
 
 
 @router.get("/scopes")
-async def add_user_scopes(
+async def get_user_scopes(
     username: str,
     session: AsyncSession = Depends(get_async_session),
 ):
@@ -84,3 +85,12 @@ async def add_user_scopes(
         )
     ).all()
     return scopes
+
+
+@router.get("/user")
+async def get_users(
+    user_info: UserInfo = Depends(validate_jwt),
+    session: AsyncSession = Depends(get_async_session),
+):
+    scopes = await get_user_scopes(user_info.username, session)
+    return {"username": user_info.username, "scopes": scopes}
