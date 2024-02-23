@@ -1,14 +1,13 @@
-import logging
 from fastapi import Depends, HTTPException
 from fastapi.routing import APIRouter
 from sqlalchemy import exists, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from yumi import UserInfo
-from ...deps import get_async_session
-from ...database.models import UserModel, UserScopeModel
-from ..schemas import AuthData, AuthUpdate, UserScopesData
-from ..tools import blake2b_hash
-from ..validator import validate_jwt, has_admin_scope
+from ....deps import get_async_session
+from ....database.models import UserModel, UserScopeModel
+from .schemas import UserAddBody, UserUpdateBody, UserScopesBody
+from ...tools import blake2b_hash
+from ...validator import validate_jwt, has_admin_scope
 
 router = APIRouter(
     prefix="/users",
@@ -19,7 +18,7 @@ router = APIRouter(
 
 @router.post("/create")
 async def create_user(
-    data: AuthData,
+    data: UserAddBody,
     session: AsyncSession = Depends(get_async_session),
 ):
     passwd = blake2b_hash(data.password)
@@ -38,7 +37,7 @@ async def create_user(
 
 @router.patch("/update")
 async def update_user(
-    data: AuthUpdate,
+    data: UserUpdateBody,
     session: AsyncSession = Depends(get_async_session),
 ):
     passwd = blake2b_hash(data.password)
@@ -65,7 +64,7 @@ async def get_users(session: AsyncSession = Depends(get_async_session)):
 
 @router.post("/scopes")
 async def add_user_scopes(
-    data: UserScopesData,
+    data: UserScopesBody,
     session: AsyncSession = Depends(get_async_session),
 ):
     await session.execute(
@@ -88,9 +87,10 @@ async def get_user_scopes(
 
 
 @router.get("/user")
-async def get_users(
+async def get_user(
     user_info: UserInfo = Depends(validate_jwt),
     session: AsyncSession = Depends(get_async_session),
 ):
+    """Get user information"""
     scopes = await get_user_scopes(user_info.username, session)
     return {"username": user_info.username, "scopes": scopes}
