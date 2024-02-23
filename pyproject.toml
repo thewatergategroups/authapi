@@ -26,7 +26,7 @@ ipykernel = "^6.25.2"
 
 [[tool.poetry.source]]
 name = "kube"
-url = "http://10.252.1.0:30500/simple"
+url = "http://localhost:8080/simple"
 priority = "explicit"
 
 [build-system]
@@ -39,6 +39,9 @@ plugins = ["pydantic.mypy"]
 [[tool.mypy.overrides]]
 module = ["alpaca.*", "matplotlib.*"]
 ignore_missing_imports = true
+
+[tool.pylint.main]
+extension-pkg-allow-list = ["pydantic"]
 
 [tool.ruff]
 # https://beta.ruff.rs/docs/rules/

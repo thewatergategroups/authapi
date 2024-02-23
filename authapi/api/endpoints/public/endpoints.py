@@ -4,18 +4,23 @@ from fastapi.routing import APIRouter
 import jwt
 from sqlalchemy import exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from ...deps import get_async_session
-from ...database.models import UserModel, UserScopeModel
-from ..schemas import AuthData
-from ..tools import blake2b_hash
-from ...schemas import Alg
+from ....deps import get_async_session
+from ....database.models import UserModel, UserScopeModel
+from .schemas import UserLoginBody
+from ...tools import blake2b_hash
+from ....schemas import Alg
 
 router = APIRouter(prefix="/public", tags=["public"])
 
 
+@router.get("/jwks")
+async def get_jwks():
+    return {"keys": Alg.get_public_keys()}
+
+
 @router.post("/login")
-async def get_token(
-    data: AuthData,
+async def get_password_flow_token(
+    data: UserLoginBody,
     session: AsyncSession = Depends(get_async_session),
 ):
     passwd = blake2b_hash(data.password)
@@ -58,8 +63,3 @@ async def get_token(
             headers={"kid": data.alg.load_public_key()["kid"]},
         )
     }
-
-
-@router.get("/jwks")
-async def get_jwks():
-    return {"keys": Alg.get_public_keys()}

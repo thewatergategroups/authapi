@@ -1,8 +1,6 @@
 from fastapi import FastAPI
 
-from .endpoints.public import router as pub_router
-from .endpoints.users import router as users_router
-from .endpoints.scopes import router as scopes_router
+from .endpoints import public, password, scopes, oidc
 
 from fastapi.middleware.cors import CORSMiddleware
 from ..settings import get_settings
@@ -26,8 +24,9 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    app.include_router(pub_router)
-    app.include_router(users_router)
-    app.include_router(scopes_router)
+    app.include_router(public.router)
+    app.include_router(scopes.router)
+    app.include_router(password.router)
+    app.include_router(oidc.router)
 
     return app

@@ -1,27 +1,23 @@
 from pydantic import BaseModel
-from ..schemas import Alg
+from ....schemas import Alg
 
 
-class UserScopesData(BaseModel):
+class UserScopesBody(BaseModel):
     username: str
     scope: str
 
 
-class AuthUpdate(BaseModel):
+class UserUpdateBody(BaseModel):
     username: str
     password: str
 
 
-class AuthData(BaseModel):
+class UserAddBody(BaseModel):
     username: str
     password: str
     alg: Alg = Alg.EC
     scopes: list[str]
 
 
-class ScopeData(BaseModel):
+class ScopeBody(BaseModel):
     scope: str
-
-
-class Token(BaseModel):
-    token: str
