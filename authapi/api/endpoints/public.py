@@ -4,6 +4,7 @@ from fastapi.routing import APIRouter
 import jwt
 from sqlalchemy import exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from yumi import Algorithms
 from ...deps import get_async_session
 from ...database.models import UserModel, UserScopeModel
 from ..schemas import AuthData
@@ -63,3 +64,21 @@ async def get_token(
 @router.get("/jwks")
 async def get_jwks():
     return {"keys": Alg.get_public_keys()}
+
+
+@router.get("/.well-known/openid-configuration")
+async def get_well_known_open_id():
+    return {
+        "issuer": "authapi",
+        "authorization_endpoint": "https://yourdomain.com/oauth2/authorize",
+        "token_endpoint": "https://yourdomain.com/oauth2/token",
+        "userinfo_endpoint": "https://yourdomain.com/oauth2/userinfo",
+        "jwks_uri": "https://yourdomain.com/oauth2/keys",
+        "response_types_supported": ["code", "token"],
+        "subject_types_supported": ["public"],
+        "id_token_signing_alg_values_supported": [alg.value for alg in Algorithms],
+        "scopes_supported": ["openid", "profile", "email"],
+        "token_endpoint_auth_methods_supported": ["client_secret_basic"],
+        "claims_supported": ["sub", "email", "preferred_username", "name"],
+        "code_challenge_methods_supported": ["plain", "S256"],
+    }
