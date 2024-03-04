@@ -1,7 +1,12 @@
+"""
+Application entrypoints
+"""
+
 import uvicorn
-from .settings import Settings
 from trekkers import database
 from yumi import Entrypoints
+
+from .settings import Settings
 
 
 def api(*args, **kwargs):

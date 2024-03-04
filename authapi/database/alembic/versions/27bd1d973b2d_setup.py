@@ -5,13 +5,13 @@ Revises:
 Create Date: 2023-12-24 11:47:54.172330
 
 """
-import random
-import string
+
 from typing import Sequence, Union
 
 from alembic import op
 import sqlalchemy as sa
 from authapi.api.tools import blake2b_hash
+import os
 
 # revision identifiers, used by Alembic.
 revision: str = "27bd1d973b2d"
@@ -38,9 +38,7 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("username"),
         schema="auth",
     )
-    letters = string.ascii_lowercase + string.ascii_uppercase + string.digits
-    result_str = "".join(random.choice(letters) for i in range(64))
-    pwd_hash = blake2b_hash(result_str)
+    pwd_hash = blake2b_hash(os.environ["ADMIN_PASSWORD"])
     op.execute(
         sa.text(
             f"INSERT INTO auth.users (username,pwd_hash) VALUES ('admin','{pwd_hash}')"

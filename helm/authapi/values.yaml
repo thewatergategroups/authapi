@@ -11,3 +11,5 @@ secrets:
   PGPASSWORD: <SECRET>
   PGUSER: <SECRET>
   DB_SCHEMA: auth
+  ADMIN_PASSWORD: <SECRET>
+  
