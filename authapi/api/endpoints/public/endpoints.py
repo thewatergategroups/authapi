@@ -1,14 +1,26 @@
 from datetime import datetime, timedelta
 from fastapi import Depends, HTTPException, status
+from fastapi.responses import RedirectResponse
 from fastapi.routing import APIRouter
 import jwt
+from uuid import UUID
+from ...validator import has_admin_scope, validate_jwt
+from yumi import UserInfo
 from sqlalchemy import exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from ....deps import get_async_session
-from ....database.models import UserModel, UserScopeModel
+from ....database.models import (
+    UserModel,
+    UserScopeModel,
+    ClientModel,
+    ClientRedirects,
+    ClientGrantMap,
+    ClientScopeMap,
+)
 from .schemas import UserLoginBody
-from ...tools import blake2b_hash
+from ...tools import blake2b_hash, generate_random_password
 from ....schemas import Alg
+from ..oidc.schemas import OidcTokenBody, AUTHORIZATION_CODES, ResponseTypes
 
 router = APIRouter(prefix="/public", tags=["public"])
 
@@ -55,13 +67,129 @@ async def get_password_flow_token(
         "iss": "authapi",
         "iat": now.timestamp(),
     }
-    return {
-        "token": jwt.encode(
-            payload,
-            data.alg.load_private_key(),
-            algorithm=data.alg.value,
-            headers={"kid": data.alg.load_public_key()["kid"]},
+    token = jwt.encode(
+        payload,
+        data.alg.load_private_key(),
+        algorithm=data.alg.value,
+        headers={"kid": data.alg.load_public_key()["kid"]},
+    )
+    if data.redirext_uri is not None:
+        return RedirectResponse(
+            data.redirext_uri, 302, headers={"Authorization": f"Bearer {token}"}
         )
+    return {"token": token}
+
+
+@router.get("/oidc/authorize")
+async def authorize_oidc_request(
+    response_type: ResponseTypes,
+    client_id: UUID,
+    redirect_uri: str,
+    scopes: list[str],
+    session: AsyncSession = Depends(get_async_session),
+    user_info: UserInfo = Depends(has_admin_scope()),
+):
+    allowed_scopes = (
+        (
+            await session.execute(
+                select(ClientScopeMap).where(
+                    ClientScopeMap.scope.in_(list(set(user_info.scopes) & set(scopes))),
+                    ClientScopeMap.client_id == client_id,
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+    if not allowed_scopes:
+        raise HTTPException(401, "Requested Scopes not allowed")
+
+    uri_allowed = (
+        await session.execute(
+            select(ClientRedirects.redirect_uri).where(
+                ClientRedirects.client_id == client_id,
+                ClientRedirects.redirect_uri == redirect_uri,
+            )
+        )
+    ).scalar_one_or_none()
+    if uri_allowed is None:
+        raise HTTPException(401, "redirect Uri not allowed")
+
+    if response_type != ResponseTypes.CODE:
+        raise HTTPException(400, "response type not supported")
+
+    grant_allowed = (
+        await session.execute(
+            select(ClientGrantMap.grant_type).where(
+                ClientGrantMap.client_id == client_id,
+                ClientGrantMap.grant_type == "authorization_code",
+            )
+        )
+    ).scalar_one_or_none()
+
+    if not grant_allowed:
+        raise HTTPException(401, "grant type not allowed")
+
+    code = generate_random_password()
+    AUTHORIZATION_CODES[code] = {
+        "client_id": client_id,
+        "scopes": [*allowed_scopes, f"user:{user_info.username}"],
+        "redirect_uri": redirect_uri,
+    }
+    return RedirectResponse(f"{redirect_uri}?code={code}", 302)
+
+
+@router.post("/oidc/token")
+async def get_token(
+    data: OidcTokenBody,
+    session: AsyncSession = Depends(get_async_session),
+):
+
+    code_data = AUTHORIZATION_CODES.pop(data.code, None)
+    if code_data is None:
+        raise HTTPException(401, "Authorization code not found")
+
+    client_id = code_data["client_id"]
+    if client_id != data.client_id:
+        raise HTTPException(401, "authorization code not related to this client")
+
+    if code_data["redirect_uri"] != data.redirect_uri:
+        raise HTTPException("redirect URI changed")
+
+    client_secret_hash = (
+        await session.execute(
+            select(ClientModel.secret_hash).where(ClientModel.id_ == data.client_id)
+        )
+    ).scalar_one_or_none()
+    if client_secret_hash is None:
+        raise HTTPException(404, "client not found")
+
+    if blake2b_hash(data.client_secret) != client_secret_hash:
+        raise HTTPException("incorrect client hash")
+
+    now = datetime.now()
+    scopes = code_data["scopes"]
+    expires_in = (now + timedelta(hours=1)).timestamp()
+    payload = {
+        "sub": client_id,
+        "exp": expires_in,
+        "scopes": scopes,
+        "aud": "local",
+        "iss": "authapi",
+        "iat": now.timestamp(),
+    }
+    token = jwt.encode(
+        payload,
+        Alg.EC.load_private_key(),
+        algorithm=Alg.EC.value,
+        headers={"kid": Alg.EC.load_public_key()["kid"]},
+    )
+
+    return {
+        "token": token,
+        "token_type": "Bearer",
+        "scopes": scopes,
+        "expires_in": expires_in,
     }
 
 

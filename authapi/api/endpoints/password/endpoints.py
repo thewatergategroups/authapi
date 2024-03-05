@@ -12,7 +12,7 @@ from ...validator import validate_jwt, has_admin_scope
 router = APIRouter(
     prefix="/users",
     tags=["users"],
-    dependencies=[Depends(validate_jwt), Depends(has_admin_scope())],
+    dependencies=[Depends(has_admin_scope())],
 )
 
 
