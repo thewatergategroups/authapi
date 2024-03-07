@@ -12,6 +12,7 @@ from alembic import op
 import sqlalchemy as sa
 from authapi.api.tools import blake2b_hash
 import os
+from authapi.settings import get_settings
 
 # revision identifiers, used by Alembic.
 revision: str = "27bd1d973b2d"
@@ -38,7 +39,7 @@ def upgrade() -> None:
         sa.PrimaryKeyConstraint("username"),
         schema="auth",
     )
-    pwd_hash = blake2b_hash(os.environ["ADMIN_PASSWORD"])
+    pwd_hash = blake2b_hash(get_settings().admin_password)
     op.execute(
         sa.text(
             f"INSERT INTO auth.users (username,pwd_hash) VALUES ('admin','{pwd_hash}')"

@@ -15,7 +15,7 @@ class GrantTypes(str, Enum):
     AUTHORIZATION_CODE = (
         "authorization_code"  # exchange authorization code for access token
     )
-    # IMPLICIT = "implicit"  # returns access token directly
+    IMPLICIT = "implicit"  # returns access token directly
     # REFRESH_TOKEN = "refresh_token"
     # PASSWORD = "password"  # exchanging user's username and password for token
 

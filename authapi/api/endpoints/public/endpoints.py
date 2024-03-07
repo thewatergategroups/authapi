@@ -20,7 +20,7 @@ from ....database.models import (
 from .schemas import UserLoginBody
 from ...tools import blake2b_hash, generate_random_password
 from ....schemas import Alg
-from ..oidc.schemas import OidcTokenBody, AUTHORIZATION_CODES, ResponseTypes
+from ..oidc.schemas import GrantTypes, OidcTokenBody, AUTHORIZATION_CODES, ResponseTypes
 
 router = APIRouter(prefix="/public", tags=["public"])
 
@@ -89,6 +89,18 @@ async def authorize_oidc_request(
     session: AsyncSession = Depends(get_async_session),
     user_info: UserInfo = Depends(has_admin_scope()),
 ):
+    grant_allowed = (
+        await session.execute(
+            select(ClientGrantMap.grant_type).where(
+                ClientGrantMap.client_id == client_id,
+                ClientGrantMap.grant_type == GrantTypes.AUTHORIZATION_CODE.value,
+            )
+        )
+    ).scalar_one_or_none()
+
+    if not grant_allowed:
+        raise HTTPException(401, "grant type not allowed")
+
     allowed_scopes = (
         (
             await session.execute(
@@ -118,18 +130,6 @@ async def authorize_oidc_request(
     if response_type != ResponseTypes.CODE:
         raise HTTPException(400, "response type not supported")
 
-    grant_allowed = (
-        await session.execute(
-            select(ClientGrantMap.grant_type).where(
-                ClientGrantMap.client_id == client_id,
-                ClientGrantMap.grant_type == "authorization_code",
-            )
-        )
-    ).scalar_one_or_none()
-
-    if not grant_allowed:
-        raise HTTPException(401, "grant type not allowed")
-
     code = generate_random_password()
     AUTHORIZATION_CODES[code] = {
         "client_id": client_id,
@@ -139,22 +139,50 @@ async def authorize_oidc_request(
     return RedirectResponse(f"{redirect_uri}?code={code}", 302)
 
 
+def auth_code_flow_validation(data: OidcTokenBody):
+    """validate input parameters to auth code flow"""
+    code_data = AUTHORIZATION_CODES.pop(data.code, None)
+    if code_data is None and data.grant_type == GrantTypes.AUTHORIZATION_CODE:
+        raise HTTPException(401, "Authorization code not found")
+    client_id = code_data["client_id"]
+    if client_id != data.client_id:
+        raise HTTPException(401, "authorization code not related to this client")
+    if code_data["redirect_uri"] != data.redirect_uri:
+        raise HTTPException("redirect URI changed")
+    return code_data["scopes"]
+
+
+async def implicit_flow(data: OidcTokenBody, session: AsyncSession):
+    grant_allowed = (
+        await session.execute(
+            select(ClientGrantMap.grant_type).where(
+                ClientGrantMap.client_id == data.client_id,
+                ClientGrantMap.grant_type == GrantTypes.IMPLICIT.value,
+            )
+        )
+    ).scalar_one_or_none()
+
+    if not grant_allowed:
+        raise HTTPException(401, "grant type not allowed")
+
+    return (
+        (
+            await session.execute(
+                select(ClientScopeMap.scope).where(
+                    ClientScopeMap.client_id == data.client_id
+                )
+            )
+        )
+        .scalars()
+        .all()
+    )
+
+
 @router.post("/oidc/token")
 async def get_token(
     data: OidcTokenBody,
     session: AsyncSession = Depends(get_async_session),
 ):
-
-    code_data = AUTHORIZATION_CODES.pop(data.code, None)
-    if code_data is None:
-        raise HTTPException(401, "Authorization code not found")
-
-    client_id = code_data["client_id"]
-    if client_id != data.client_id:
-        raise HTTPException(401, "authorization code not related to this client")
-
-    if code_data["redirect_uri"] != data.redirect_uri:
-        raise HTTPException("redirect URI changed")
 
     client_secret_hash = (
         await session.execute(
@@ -167,11 +195,16 @@ async def get_token(
     if blake2b_hash(data.client_secret) != client_secret_hash:
         raise HTTPException("incorrect client hash")
 
+    if data.grant_type == GrantTypes.AUTHORIZATION_CODE:
+        scopes = auth_code_flow_validation(data)
+    elif data.grant_type == GrantTypes.IMPLICIT:
+        scopes = await implicit_flow(data, session)
+
     now = datetime.now()
-    scopes = code_data["scopes"]
+
     expires_in = (now + timedelta(hours=1)).timestamp()
     payload = {
-        "sub": client_id,
+        "sub": data.client_id,
         "exp": expires_in,
         "scopes": scopes,
         "aud": "local",

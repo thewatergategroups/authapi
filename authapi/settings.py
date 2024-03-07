@@ -1,6 +1,7 @@
 """
 Consts, Enums and Models
 """
+
 from functools import lru_cache
 from pydantic import BaseSettings
 from trekkers.config import DbSettings
@@ -14,6 +15,7 @@ class Settings(BaseSettings):
     """Application Settings"""
 
     salt: str = ""
+    admin_password: str = ""
     db_settings: DbSettings = DbSettings(
         env_script_location=f"{TOP_LEVEL_PATH}/database/alembic"
     )

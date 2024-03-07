@@ -31,3 +31,9 @@ push: build
 template:
 	if [ ! -f secret_vals.yaml ]; then echo "secrets: {}" > secret_vals.yaml; fi
 	helm template ./helm/$(REPOSITORY) -f secret_vals.yaml --debug > template.yaml
+
+test: 
+	docker run --rm -p 5431:5432 --name test-db --env POSTGRES_USER=postgres --env POSTGRES_DB=postgres --env POSTGRES_PASSWORD=postgres -d postgres:16
+	sleep 0.2
+	pytest tests || :
+	docker kill test-db
