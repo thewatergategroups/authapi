@@ -1791,7 +1791,7 @@ sqlalchemy = {version = ">=2.0.19,<3.0.0", extras = ["asyncio"]}
 
 [package.source]
 type = "legacy"
-url = "http://localhost:8080/simple"
+url = "http://pypi.apps.svc.cluster.local:8080/simple"
 reference = "kube"
 
 [[package]]
@@ -1957,13 +1957,13 @@ files = [
 
 [[package]]
 name = "yumi"
-version = "0.1.2"
+version = "0.1.3"
 description = "helper package"
 optional = false
 python-versions = ">=3.11,<3.12"
 files = [
-    {file = "yumi-0.1.2-py3-none-any.whl", hash = "sha256:ef1e212ebd9984794d25738267b0fde4b53f7d06cad28bfb931a655e6057cb8b"},
-    {file = "yumi-0.1.2.tar.gz", hash = "sha256:d5fb2eb8e03a456c9ebbe74cdcbac15317bb6d5eb1a4da4e7172e74c810590d5"},
+    {file = "yumi-0.1.3-py3-none-any.whl", hash = "sha256:8e5ded2cc8359ec379d5dfacd267d5c14f7acfdb5ade5bd9146bb7614fbdbe88"},
+    {file = "yumi-0.1.3.tar.gz", hash = "sha256:dbb7f12ff5a2e55c5bbb8531aafda3f574089593f5873ddede34a8ca210c6407"},
 ]
 
 [package.dependencies]
@@ -1973,10 +1973,10 @@ pyjwt = ">=2.8.0,<3.0.0"
 
 [package.source]
 type = "legacy"
-url = "http://localhost:8080/simple"
+url = "http://pypi.apps.svc.cluster.local:8080/simple"
 reference = "kube"
 
 [metadata]
 lock-version = "2.0"
 python-versions = "~3.11"
-content-hash = "07073b46bb14cb7bc87728ae1b16b7a4963a81975f78f639327e0f7cec693553"
+content-hash = "004afb69e664b8fa9808b630492b8e4cdd078d56fd808f4cf9eb0efcef86f151"
