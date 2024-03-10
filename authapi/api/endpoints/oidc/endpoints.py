@@ -1,5 +1,6 @@
+from typing import Annotated
 from uuid import UUID, uuid4
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, Query
 from fastapi.responses import JSONResponse
 from fastapi.routing import APIRouter
 from sqlalchemy import exists, insert, select
@@ -70,7 +71,7 @@ async def create_client(
     )
     return JSONResponse(
         {
-            "client_id": id_,
+            "client_id": str(id_),
             "client_secret": secret,
             "redirect_uris": data.redirect_uris,
             "grant_types": data.grant_types,
@@ -190,3 +191,16 @@ async def get_client(
         "redirect_uris": redirects,
         "grant_types": grants,
     }
+
+
+# @router.get("userinfo")
+# async def get_userinfo(
+#     audience: str,
+#     scopes: Annotated[list[str], Query()],
+#     subject: str,
+# ):
+#     if "openid" not in scopes:
+#         raise HTTPException(400, "requires openid scope")
+#     ### ENSURE AUD IS OPENID AUD
+
+#     ### GET USER DATA BASED OF SUBJECT AND RETURN IT

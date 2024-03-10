@@ -23,6 +23,10 @@ def has_admin_scope():
     return has_scope(Scopes.ADMIN)
 
 
+def has_openid_scope():
+    return has_scope(Scopes.OPENID)
+
+
 def has_scope(scope: Scopes):
     def _has_scope(user_info: Annotated[UserInfo, Depends(validate_jwt)]):
         if scope.value not in user_info.scopes:

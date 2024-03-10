@@ -7,4 +7,4 @@ class UserLoginBody(BaseModel):
     password: str
     scopes: list[str]
     alg: Alg = Alg.EC
-    redirext_uri: str | None = None
+    redirect_uri: str | None = None

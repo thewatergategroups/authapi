@@ -1,6 +1,7 @@
 from enum import Enum
 from uuid import UUID
 from pydantic import BaseModel
+from ....schemas import Alg
 
 
 AUTHORIZATION_CODES = {}
@@ -35,6 +36,8 @@ class OidcTokenBody(BaseModel):
     grant_type: GrantTypes
     code: str | None = None
     redirect_uri: str
+    alg: Alg = Alg.EC
+    scopes: list[str]
 
 
 class ClientScopesBody(BaseModel):
@@ -53,5 +56,15 @@ class ClientGrantBody(BaseModel):
 
 
 class ResponseTypes(str, Enum):
-    # TOKEN = "token"  # Used in implicit flow
+    TOKEN = "token"  # Used in implicit flow
     CODE = "code"  # used in authorization code flow
+    ID_TOKEN = "id_token"  ### for oidc
+
+    ID_T_T = "id_token token"
+    C_ID_T = "code id_token"
+    C_T = "code token"
+    C_ID_T_T = "code id_token token"
+
+    @classmethod
+    def get_all(cls):
+        return [item.value for item in cls]

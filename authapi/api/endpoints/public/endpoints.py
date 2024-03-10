@@ -1,11 +1,12 @@
 from datetime import datetime, timedelta
-from fastapi import Depends, HTTPException, status
+from typing import Annotated
+from fastapi import Depends, HTTPException, Query, status
 from fastapi.responses import RedirectResponse
 from fastapi.routing import APIRouter
 import jwt
 from uuid import UUID
-from ...validator import has_admin_scope, validate_jwt
-from yumi import UserInfo
+from ...validator import has_admin_scope
+from yumi import Scopes, UserInfo
 from sqlalchemy import exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from ....deps import get_async_session
@@ -28,6 +29,25 @@ router = APIRouter(prefix="/public", tags=["public"])
 @router.get("/jwks")
 async def get_jwks():
     return {"keys": Alg.get_public_keys()}
+
+
+def build_user_token(username: str, scopes: list[str] | None = None, alg: Alg = Alg.EC):
+    now = datetime.now()
+    payload = {
+        "sub": username,
+        "exp": (now + timedelta(hours=1)).timestamp(),
+        "aud": "local",
+        "iss": "authapi",
+        "iat": now.timestamp(),
+    }
+    if scopes is not None:
+        payload["scopes"] = scopes
+    return jwt.encode(
+        payload,
+        alg.load_private_key(),
+        algorithm=alg.value,
+        headers={"kid": alg.load_public_key()["kid"]},
+    )
 
 
 @router.post("/login")
@@ -58,24 +78,10 @@ async def get_password_flow_token(
             status.HTTP_401_UNAUTHORIZED,
             "user does not have any of the requested scope",
         )
-    now = datetime.now()
-    payload = {
-        "sub": data.username,
-        "exp": (now + timedelta(hours=1)).timestamp(),
-        "scopes": data.scopes,
-        "aud": "local",
-        "iss": "authapi",
-        "iat": now.timestamp(),
-    }
-    token = jwt.encode(
-        payload,
-        data.alg.load_private_key(),
-        algorithm=data.alg.value,
-        headers={"kid": data.alg.load_public_key()["kid"]},
-    )
-    if data.redirext_uri is not None:
+    token = build_user_token(data.username, data.scopes, data.alg)
+    if data.redirect_uri is not None:
         return RedirectResponse(
-            data.redirext_uri, 302, headers={"Authorization": f"Bearer {token}"}
+            data.redirect_uri, 302, headers={"Authorization": f"Bearer {token}"}
         )
     return {"token": token}
 
@@ -85,10 +91,13 @@ async def authorize_oidc_request(
     response_type: ResponseTypes,
     client_id: UUID,
     redirect_uri: str,
-    scopes: list[str],
+    scopes: Annotated[list[str], Query()],
+    alg: Alg = Alg.EC,
     session: AsyncSession = Depends(get_async_session),
     user_info: UserInfo = Depends(has_admin_scope()),
 ):
+    """state is a base64 encoded string"""
+
     grant_allowed = (
         await session.execute(
             select(ClientGrantMap.grant_type).where(
@@ -104,8 +113,8 @@ async def authorize_oidc_request(
     allowed_scopes = (
         (
             await session.execute(
-                select(ClientScopeMap).where(
-                    ClientScopeMap.scope.in_(list(set(user_info.scopes) & set(scopes))),
+                select(ClientScopeMap.scope).where(
+                    ClientScopeMap.scope.in_(scopes),
                     ClientScopeMap.client_id == client_id,
                 )
             )
@@ -127,16 +136,52 @@ async def authorize_oidc_request(
     if uri_allowed is None:
         raise HTTPException(401, "redirect Uri not allowed")
 
-    if response_type != ResponseTypes.CODE:
-        raise HTTPException(400, "response type not supported")
+    if response_type == ResponseTypes.TOKEN:
+        token, expires_in = build_client_token(
+            str(client_id), allowed_scopes, alg, user_info.username
+        )
+        return {
+            "token": token,
+            "token_type": "Bearer",
+            "scopes": scopes,
+            "expires_in": expires_in,
+        }
 
-    code = generate_random_password()
-    AUTHORIZATION_CODES[code] = {
-        "client_id": client_id,
-        "scopes": [*allowed_scopes, f"user:{user_info.username}"],
-        "redirect_uri": redirect_uri,
-    }
-    return RedirectResponse(f"{redirect_uri}?code={code}", 302)
+    elif response_type == ResponseTypes.ID_TOKEN:
+        if Scopes.OPENID not in allowed_scopes:
+            raise HTTPException(
+                "openid scope required to be present to get an id token"
+            )
+        token = build_user_token(user_info.username, alg=alg)
+        return {"id_token": token}
+
+    elif response_type == ResponseTypes.CODE:
+        code = generate_random_password()
+        AUTHORIZATION_CODES[code] = {
+            "client_id": client_id,
+            "scopes": allowed_scopes,
+            "username": user_info.username,
+            "redirect_uri": redirect_uri,
+        }
+        return {"code": code}
+
+    raise HTTPException(400, f"Response type {response_type} not implemented")
+    # elif response_type == ResponseTypes.ID_T_T:
+    #     token, expires_in = build_client_token(str(client_id), final_scopes, alg)
+    #     return {
+    #         "token": token,
+    #         "id_token": build_user_token(user_info.username, alg=alg),
+    #         "token_type": "Bearer",
+    #         "scopes": scopes,
+    #         "expires_in": expires_in,
+    #     }
+
+    # elif response_type == ResponseTypes.C_ID_T:
+    #     token = build_user_token(user_info.username, alg=alg)
+
+    #     return {"id_token": token, "code": code}
+
+    # return RedirectResponse(f"{redirect_uri}?code={code}&state={state}", 302)
 
 
 def auth_code_flow_validation(data: OidcTokenBody):
@@ -145,11 +190,12 @@ def auth_code_flow_validation(data: OidcTokenBody):
     if code_data is None and data.grant_type == GrantTypes.AUTHORIZATION_CODE:
         raise HTTPException(401, "Authorization code not found")
     client_id = code_data["client_id"]
+    username = code_data["username"]
     if client_id != data.client_id:
         raise HTTPException(401, "authorization code not related to this client")
     if code_data["redirect_uri"] != data.redirect_uri:
         raise HTTPException("redirect URI changed")
-    return code_data["scopes"]
+    return code_data["scopes"], username
 
 
 async def implicit_flow(data: OidcTokenBody, session: AsyncSession):
@@ -169,12 +215,40 @@ async def implicit_flow(data: OidcTokenBody, session: AsyncSession):
         (
             await session.execute(
                 select(ClientScopeMap.scope).where(
-                    ClientScopeMap.client_id == data.client_id
+                    ClientScopeMap.scope.in_(data.scopes),
+                    ClientScopeMap.client_id == data.client_id,
                 )
             )
         )
         .scalars()
         .all()
+    )
+
+
+def build_client_token(
+    client_id: str, scopes: list[str], alg: Alg, username: str | None = None
+):
+    now = datetime.now()
+
+    expires_in = (now + timedelta(hours=1)).timestamp()
+    payload = {
+        "sub": client_id,
+        "exp": expires_in,
+        "scopes": scopes,
+        "aud": "local",
+        "iss": "authapi",
+        "iat": now.timestamp(),
+    }
+    if username:
+        payload["du"] = username
+    return (
+        jwt.encode(
+            payload,
+            alg.load_private_key(),
+            algorithm=alg.value,
+            headers={"kid": alg.load_public_key()["kid"]},
+        ),
+        expires_in,
     )
 
 
@@ -196,34 +270,23 @@ async def get_token(
         raise HTTPException("incorrect client hash")
 
     if data.grant_type == GrantTypes.AUTHORIZATION_CODE:
-        scopes = auth_code_flow_validation(data)
+        scopes, username = auth_code_flow_validation(data)
     elif data.grant_type == GrantTypes.IMPLICIT:
         scopes = await implicit_flow(data, session)
 
-    now = datetime.now()
-
-    expires_in = (now + timedelta(hours=1)).timestamp()
-    payload = {
-        "sub": data.client_id,
-        "exp": expires_in,
-        "scopes": scopes,
-        "aud": "local",
-        "iss": "authapi",
-        "iat": now.timestamp(),
-    }
-    token = jwt.encode(
-        payload,
-        Alg.EC.load_private_key(),
-        algorithm=Alg.EC.value,
-        headers={"kid": Alg.EC.load_public_key()["kid"]},
-    )
-
-    return {
+    token, expires_in = build_client_token(str(data.client_id), data.scopes, data.alg)
+    response = {
         "token": token,
         "token_type": "Bearer",
         "scopes": scopes,
         "expires_in": expires_in,
     }
+
+    if Scopes.OPENID in scopes:
+        user_token = build_user_token(username)
+        response["id_token"] = user_token
+
+    return response
 
 
 # @router.get("/.well-known/openid-configuration")
