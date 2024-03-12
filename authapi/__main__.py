@@ -2,8 +2,10 @@
 Entrypoint to the application
 """
 import argparse
-from .entrypoints import Entry
+
 from yumi import setup_logging
+
+from .entrypoints import Entry
 from .settings import Settings
 
 if __name__ == "__main__":

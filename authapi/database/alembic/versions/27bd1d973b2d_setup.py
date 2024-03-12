@@ -1,3 +1,4 @@
+# pylint: disable-all
 """setup
 
 Revision ID: 27bd1d973b2d
@@ -6,12 +7,13 @@ Create Date: 2023-12-24 11:47:54.172330
 
 """
 
+import os
 from typing import Sequence, Union
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
+
 from authapi.api.tools import blake2b_hash
-import os
 from authapi.settings import get_settings
 
 # revision identifiers, used by Alembic.

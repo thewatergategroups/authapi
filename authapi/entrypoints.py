@@ -9,7 +9,7 @@ from yumi import Entrypoints
 from .settings import Settings
 
 
-def api(*args, **kwargs):
+def api(*_, **__):
     """API for querying data"""
     uvicorn.run(
         "authapi.api.app:create_app",
@@ -21,10 +21,13 @@ def api(*args, **kwargs):
     )
 
 
-def db(settings: Settings, action: str, revision: str | None, *args, **kwargs):
+def db(settings: Settings, action: str, revision: str | None, *_, **__):
+    """Database migration function"""
     database(settings.db_settings, action, revision)
 
 
 class Entry(Entrypoints):
+    """Avaliable Entrypoint definitions"""
+
     API = "api", api
     DATABASE = "db", db

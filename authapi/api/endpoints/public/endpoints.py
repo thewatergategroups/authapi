@@ -1,49 +1,68 @@
+"""
+Public endpoints for authentication and authorization
+"""
+
 from datetime import datetime, timedelta
 from typing import Annotated
+from uuid import UUID
+
+import jwt
 from fastapi import Depends, HTTPException, Query, status
 from fastapi.responses import RedirectResponse
 from fastapi.routing import APIRouter
-import jwt
-from uuid import UUID
-from ...validator import has_admin_scope
-from yumi import Scopes, UserInfo
 from sqlalchemy import exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from ....deps import get_async_session
+from yumi import Scopes, UserInfo
+
+
 from ....database.models import (
-    UserModel,
-    UserScopeModel,
+    ClientGrantMap,
     ClientModel,
     ClientRedirects,
-    ClientGrantMap,
     ClientScopeMap,
+    UserModel,
+    UserScopeModel,
+)
+from ....deps import get_async_session
+from ....settings import get_settings
+from ....schemas import Alg, JWT
+from ...tools import blake2b_hash, generate_random_password
+from ...validator import has_admin_scope
+from ..oidc.schemas import (
+    AUTHORIZATION_CODES,
+    GrantTypes,
+    OidcTokenBody,
+    ResponseTypes,
+    ClientType,
 )
 from .schemas import UserLoginBody
-from ...tools import blake2b_hash, generate_random_password
-from ....schemas import Alg
-from ..oidc.schemas import GrantTypes, OidcTokenBody, AUTHORIZATION_CODES, ResponseTypes
 
 router = APIRouter(prefix="/public", tags=["public"])
 
 
 @router.get("/jwks")
 async def get_jwks():
+    """
+    Returns avaliable public keys
+    No Authentication required
+    """
     return {"keys": Alg.get_public_keys()}
 
 
 def build_user_token(username: str, scopes: list[str] | None = None, alg: Alg = Alg.EC):
+    """Function to creates a user token based on the passed in information"""
     now = datetime.now()
-    payload = {
-        "sub": username,
-        "exp": (now + timedelta(hours=1)).timestamp(),
-        "aud": "local",
-        "iss": "authapi",
-        "iat": now.timestamp(),
-    }
+    payload = JWT(
+        sub=username,
+        exp=(now + timedelta(hours=1)).timestamp(),
+        aud="local",
+        iss="authapi",
+        iat=now.timestamp(),
+    )
     if scopes is not None:
-        payload["scopes"] = scopes
+        payload.scopes = scopes
     return jwt.encode(
-        payload,
+        payload.dict(exclude_none=True),
         alg.load_private_key(),
         algorithm=alg.value,
         headers={"kid": alg.load_public_key()["kid"]},
@@ -55,6 +74,9 @@ async def get_password_flow_token(
     data: UserLoginBody,
     session: AsyncSession = Depends(get_async_session),
 ):
+    """
+    Returns a user token for a user who authenticated with a username and password
+    """
     passwd = blake2b_hash(data.password)
     us_exists = await session.scalar(
         select(exists(UserModel)).where(
@@ -96,7 +118,10 @@ async def authorize_oidc_request(
     session: AsyncSession = Depends(get_async_session),
     user_info: UserInfo = Depends(has_admin_scope()),
 ):
-    """state is a base64 encoded string"""
+    """
+    Authorization endpoint for OIDC and oAuth flows.
+    Authenticated with a User token
+    """
 
     grant_allowed = (
         await session.execute(
@@ -199,6 +224,7 @@ def auth_code_flow_validation(data: OidcTokenBody):
 
 
 async def implicit_flow(data: OidcTokenBody, session: AsyncSession):
+    """validate input parameters to the implicit flow"""
     grant_allowed = (
         await session.execute(
             select(ClientGrantMap.grant_type).where(
@@ -228,22 +254,23 @@ async def implicit_flow(data: OidcTokenBody, session: AsyncSession):
 def build_client_token(
     client_id: str, scopes: list[str], alg: Alg, username: str | None = None
 ):
+    """build a client token based on the passed in information"""
     now = datetime.now()
 
     expires_in = (now + timedelta(hours=1)).timestamp()
-    payload = {
-        "sub": client_id,
-        "exp": expires_in,
-        "scopes": scopes,
-        "aud": "local",
-        "iss": "authapi",
-        "iat": now.timestamp(),
-    }
+    payload = JWT(
+        sub=client_id,
+        exp=expires_in,
+        aud="local",
+        iss="authapi",
+        iat=now.timestamp(),
+        scopes=scopes,
+    )
     if username:
-        payload["du"] = username
+        payload.du = username
     return (
         jwt.encode(
-            payload,
+            payload.dict(exclude_none=True),
             alg.load_private_key(),
             algorithm=alg.value,
             headers={"kid": alg.load_public_key()["kid"]},
@@ -257,7 +284,10 @@ async def get_token(
     data: OidcTokenBody,
     session: AsyncSession = Depends(get_async_session),
 ):
-
+    """
+    Get client token
+    Authenticated with a Client ID and Client Secret
+    """
     client_secret_hash = (
         await session.execute(
             select(ClientModel.secret_hash).where(ClientModel.id_ == data.client_id)
@@ -289,19 +319,25 @@ async def get_token(
     return response
 
 
-# @router.get("/.well-known/openid-configuration")
-# async def get_well_known_open_id():
-#     return {
-#         "issuer": "authapi",
-#         "authorization_endpoint": "https://yourdomain.com/oauth2/authorize",
-#         "token_endpoint": "https://yourdomain.com/oauth2/token",
-#         "userinfo_endpoint": "https://yourdomain.com/oauth2/userinfo",
-#         "jwks_uri": "https://yourdomain.com/oauth2/keys",
-#         "response_types_supported": ["code", "token"],
-#         "subject_types_supported": ["public"],
-#         "id_token_signing_alg_values_supported": [alg.value for alg in Alg],
-#         "scopes_supported": ["openid", "profile", "email"],
-#         "token_endpoint_auth_methods_supported": ["client_secret_basic"],
-#         "claims_supported": ["sub", "email", "preferred_username", "name"],
-#         "code_challenge_methods_supported": ["plain", "S256"],
-#     }
+@router.get("/.well-known/openid-configuration")
+async def get_well_known_open_id():
+    """
+    Endpoint to return the OIDC configuration for
+    third party applications to use this service as an IDP
+    """
+    domain = get_settings().jwt_config.jwks_server_url
+    return {
+        "issuer": "authapi",
+        "authorization_endpoint": f"{domain}/auth/public/oidc/authorize",
+        "token_endpoint": f"{domain}/auth/public/oidc/token",
+        "userinfo_endpoint": f"{domain}/auth/clients/userinfo",
+        "jwks_uri": f"{domain}/auth/public/keys",
+        "response_types_supported": ResponseTypes.get_all(),
+        "response_modes_supported": ["query"],
+        "subject_types_supported": ClientType.get_all(),
+        "id_token_signing_alg_values_supported": [alg.value for alg in Alg],
+        "scopes_supported": [item.value for item in Scopes],
+        "token_endpoint_auth_methods_supported": ["client_secret_post"],
+        "claims_supported": JWT.get_claims(),
+        "code_challenge_methods_supported": ["plain", "S256"],
+    }

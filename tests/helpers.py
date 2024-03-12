@@ -1,10 +1,16 @@
-from authapi.api.endpoints.oidc.schemas import ClientAddBody, ClientType, GrantTypes
-from authapi.schemas import Alg
-from authapi.api.endpoints.public.schemas import UserLoginBody
+"""
+Reusable functions for testing
+"""
+
 import requests
+
+from authapi.api.endpoints.oidc.schemas import ClientAddBody, ClientType, GrantTypes
+from authapi.api.endpoints.public.schemas import UserLoginBody
+from authapi.schemas import Alg
 
 
 def get_token(url: str, username: str, scopes: list[str]):
+    """Get a User token"""
     response = requests.post(
         f"{url}/public/login",
         json=UserLoginBody(
@@ -29,6 +35,7 @@ def create_client(
     grant_types: list[GrantTypes],
     client_type: ClientType = ClientType.CONFIDENTIAL,
 ):
+    """Create a Client Application"""
     token = get_token(url, token_username, token_scopes)
 
     response = requests.post(

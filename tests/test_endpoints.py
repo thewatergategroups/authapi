@@ -1,14 +1,23 @@
+"""
+Endpoint tests
+"""
+
 import json
-import requests
-
-from yumi import Scopes
-from .conftest import server
-from authapi.api.endpoints.oidc.schemas import GrantTypes, ResponseTypes
 from base64 import b64decode
-from .helpers import get_token, create_client
+
+import requests
+from yumi import Scopes
+
+from authapi.api.endpoints.oidc.schemas import GrantTypes, ResponseTypes
+
+from .conftest import server  # pylint: disable=unused-import
+from .helpers import create_client, get_token
 
 
-def test_get_token(server):
+def test_get_token(server):  # pylint: disable=redefined-outer-name
+    """
+    test getting a user token
+    """
     username = "admin"
     scopes = ["admin", "read", "write"]
     token = get_token(server, username, scopes)
@@ -21,7 +30,8 @@ def test_get_token(server):
     assert token_info["scopes"] == scopes
 
 
-def make_test_client(server):
+def make_test_client(server):  # pylint: disable=redefined-outer-name
+    """create a predefined test client"""
     name = "client1"
     scopes = [Scopes.READ.value, Scopes.WRITE.value, Scopes.OPENID.value]
     grant_types = [GrantTypes.AUTHORIZATION_CODE, GrantTypes.IMPLICIT]
@@ -32,7 +42,8 @@ def make_test_client(server):
     )
 
 
-def test_get_client_token(server):
+def test_get_client_token(server):  # pylint: disable=redefined-outer-name
+    """test getting a client token"""
     scopes = [Scopes.READ.value, Scopes.WRITE.value, Scopes.OPENID.value]
     data = make_test_client(server)
     client_id = data.get("client_id")
@@ -57,7 +68,15 @@ def test_get_client_token(server):
     assert data.get("scopes") == ["read"]
 
 
-def test_authorization_token_flow(server):
+def test_authorization_token_flow(server):  # pylint: disable=redefined-outer-name
+    """
+    test authorization token flow
+    Steps:
+    1. make client
+    2. authenticate user
+    3. send Authorize request to get a token using user credentials
+    4. client token returned
+    """
     data = make_test_client(server)
     token = get_token(server, "admin", ["admin"])
 
@@ -78,7 +97,15 @@ def test_authorization_token_flow(server):
     assert data.get("scopes") == ["read"]
 
 
-def test_authorization_id_token_flow(server):
+def test_authorization_id_token_flow(server):  # pylint: disable=redefined-outer-name
+    """
+    test authorization id token flow
+    Steps:
+    1. make client
+    2. authenticate user
+    3. send Authorize request to get a id token using user credentials
+    4. id token with information about user returned
+    """
     data = make_test_client(server)
     token = get_token(server, "admin", ["admin"])
 
@@ -98,7 +125,15 @@ def test_authorization_id_token_flow(server):
     assert data.get("id_token") is not None
 
 
-def test_authorization_code_flow_openid(server):
+def test_authorization_code_flow_openid(server):  # pylint: disable=redefined-outer-name
+    """
+    test authorization id token flow
+    Steps:
+    1. make client
+    2. authenticate user
+    3. send Authorize request to get a authorization code with the openid scope
+    4. send token request with authorization code and openid scope to get client token and id token
+    """
     data = make_test_client(server)
     token = get_token(server, "admin", ["admin"])
 
@@ -136,7 +171,17 @@ def test_authorization_code_flow_openid(server):
     assert data.get("scopes") == ["openid", "read"]
 
 
-def test_authorization_code_flow_no_openid(server):
+def test_authorization_code_flow_no_openid(
+    server,
+):  # pylint: disable=redefined-outer-name
+    """
+    test authorization id token flow
+    Steps:
+    1. make client
+    2. authenticate user
+    3. send Authorize request to get a authorization code
+    4. send token request with authorization code to get client token
+    """
     data = make_test_client(server)
     token = get_token(server, "admin", ["admin"])
 

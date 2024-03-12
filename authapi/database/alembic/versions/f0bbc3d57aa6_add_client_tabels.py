@@ -1,3 +1,4 @@
+# pylint: disable-all
 """add client tabels
 
 Revision ID: f0bbc3d57aa6
@@ -8,8 +9,8 @@ Create Date: 2024-02-23 07:31:14.262076
 
 from typing import Sequence, Union
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 
 # revision identifiers, used by Alembic.
 revision: str = "f0bbc3d57aa6"

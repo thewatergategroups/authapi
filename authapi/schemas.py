@@ -1,36 +1,67 @@
+"""
+Important Application wide schemas for JWT authentication 
+"""
+
 import base64
+from enum import StrEnum
 from functools import lru_cache
-from pydantic import BaseModel
-from cryptography.hazmat.primitives.asymmetric import rsa, ec
+from typing import Any
+
 from cryptography.hazmat.backends import default_backend
 from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric import ec, rsa
+from pydantic import BaseModel
 from sqlalchemy import insert, select
 from sqlalchemy.orm import Session
-from enum import StrEnum
-from .deps import get_sync_sessionm
+from yumi import Algorithms, Scopes
+
 from .database.models import CertModel
-from yumi import Algorithms
+from .deps import get_sync_sessionm
+
+
+class JWT(BaseModel):
+    """JWT model"""
+
+    sub: str
+    aud: str
+    iss: str
+    iat: float
+    exp: float
+    du: str | None = None
+    scopes: list[Scopes] | None = None
+
+    @classmethod
+    def get_claims(cls):
+        """Return JWT supported claims"""
+        return [value for value in cls.__fields__.keys() if value != "scopes"]
 
 
 class Jwk(BaseModel):
+    """Base model for JWK's that adds extra useful functionality used by child classes"""
+
     kty: str
     kid: str
     use: str
 
     @staticmethod
     def encode(value: int):
+        """return a base64 encoded equivalent of a passed in integer"""
         return base64.b64encode(value.to_bytes(length=(value.bit_length() + 7) // 8))
 
     @classmethod
-    def get(cls, *args, **kwargs):
+    def get(cls, _: Any):
+        """return an instance of self"""
         return cls(kty="JWT", kid="123", use="none")
 
     @staticmethod
     def generate_pk():
+        """Placeholder function to be implemented by child objects"""
         raise NotImplementedError("Not yet implemented for this class")
 
 
 class EcJwk(Jwk):
+    """Eliptical Curve JWK Algorithm implementation"""
+
     crv: str
     x: bytes
     y: bytes
@@ -50,10 +81,13 @@ class EcJwk(Jwk):
 
     @staticmethod
     def generate_pk():
+        """Generate a private key usinng the eliptical curve algorithm"""
         return ec.generate_private_key(ec.SECP256R1(), default_backend())
 
 
 class RsaJwk(Jwk):
+    """RSA JWK Algorithm implementation"""
+
     n: bytes
     e: bytes
 
@@ -71,12 +105,18 @@ class RsaJwk(Jwk):
 
     @staticmethod
     def generate_pk():
+        """Generate a private key usinng the RSA algorithm"""
         return rsa.generate_private_key(
             public_exponent=65537, key_size=2048, backend=default_backend()
         )
 
 
 class Alg(StrEnum):
+    """
+    1. Enum defining allowed algorithms
+    2. some helper functions to make the algorithms accessible
+    """
+
     def __init__(self, algorithm: str):
         super().__init__()
         self.alg = algorithm
@@ -89,11 +129,13 @@ class Alg(StrEnum):
     @classmethod
     @lru_cache
     def get_public_keys(cls):
+        """return all public keys for all algorithms"""
         return [item.load_public_key() for item in cls]
 
     @lru_cache
     def load_private_key(self):
-        with get_sync_sessionm().begin() as session:
+        """load private key for a particular algorithm from the database"""
+        with get_sync_sessionm().begin() as session:  # pylint: disable=no-member
             cert = session.scalar(select(CertModel).where(CertModel.alg == self.alg))
             if not cert:
                 raise ValueError(f"missing certificate for algorithm {self.alg}")
@@ -103,12 +145,14 @@ class Alg(StrEnum):
 
     @lru_cache
     def load_public_key(self):
+        """return the public key for a particular algorithm"""
         private_key = self.load_private_key()
         public_key = private_key.public_key()
         public_numbers = public_key.public_numbers()
         return self.model.get(public_numbers).dict()
 
     def generate_private_key(self):
+        """Generate a private key for a particular algorithm"""
         private_key = self.model.generate_pk()
         private_pem = private_key.private_bytes(
             encoding=serialization.Encoding.PEM,
@@ -118,4 +162,5 @@ class Alg(StrEnum):
         return private_pem
 
     def insert_cert(self, session: Session, private_pem: bytes):
+        """insert a private key into the database"""
         session.execute(insert(CertModel).values(alg=self.value, cert=private_pem))

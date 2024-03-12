@@ -1,10 +1,17 @@
-from sqlalchemy import ForeignKey
+"""
+Postgres Database table definitions
+"""
+
 from uuid import UUID
+
+from sqlalchemy import ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column
 from trekkers import BaseSql
 
 
 class CertModel(BaseSql):
+    """table definition for storing private key certificates"""
+
     __tablename__ = "certs"
     __table_args__ = {"schema": "auth"}
     alg: Mapped[str] = mapped_column(primary_key=True)
@@ -12,6 +19,8 @@ class CertModel(BaseSql):
 
 
 class UserModel(BaseSql):
+    """table definition for storing user data"""
+
     __tablename__ = "users"
     __table_args__ = {"schema": "auth"}
     username: Mapped[str] = mapped_column(primary_key=True)
@@ -19,12 +28,16 @@ class UserModel(BaseSql):
 
 
 class ScopesModel(BaseSql):
+    """table definition for storing avaliable scopes"""
+
     __tablename__ = "scopes"
     __table_args__ = {"schema": "auth"}
     id_: Mapped[str] = mapped_column(primary_key=True)
 
 
 class UserScopeModel(BaseSql):
+    """table definition for storing what scopes users have"""
+
     __tablename__ = "user_scopes"
     __table_args__ = {"schema": "auth"}
     scope_id: Mapped[str] = mapped_column(
@@ -36,6 +49,8 @@ class UserScopeModel(BaseSql):
 
 
 class ClientModel(BaseSql):
+    """table definition for storing client data"""
+
     __tablename__ = "clients"
     __table_args__ = {"schema": "auth"}
     id_: Mapped[UUID] = mapped_column(primary_key=True)
@@ -46,6 +61,8 @@ class ClientModel(BaseSql):
 
 
 class ClientGrantMap(BaseSql):
+    """table definition that maps clients to their allowed grant types"""
+
     __tablename__ = "client_grants"
     __table_args__ = {"schema": "auth"}
     client_id: Mapped[UUID] = mapped_column(
@@ -55,6 +72,8 @@ class ClientGrantMap(BaseSql):
 
 
 class ClientScopeMap(BaseSql):
+    """table definition that maps clients to their allowed scopes"""
+
     __tablename__ = "client_scopes"
     __table_args__ = {"schema": "auth"}
     client_id: Mapped[UUID] = mapped_column(
@@ -64,6 +83,8 @@ class ClientScopeMap(BaseSql):
 
 
 class ClientRedirects(BaseSql):
+    """table definition that maps clients to their allowed redirect_urls"""
+
     __tablename__ = "client_redirect_uris"
     __table_args__ = {"schema": "auth"}
     client_id: Mapped[UUID] = mapped_column(

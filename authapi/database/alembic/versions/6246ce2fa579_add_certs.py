@@ -1,3 +1,5 @@
+# pylint: disable-all
+
 """add_certs
 
 Revision ID: 6246ce2fa579
@@ -7,10 +9,11 @@ Create Date: 2023-12-26 18:43:10.490436
 """
 from typing import Sequence, Union
 
-from alembic import op
 import sqlalchemy as sa
-from authapi.schemas import Alg
+from alembic import op
 from sqlalchemy import orm
+
+from authapi.schemas import Alg
 
 # revision identifiers, used by Alembic.
 revision: str = "6246ce2fa579"

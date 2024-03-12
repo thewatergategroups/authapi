@@ -1,10 +1,16 @@
+"""
+Create the FastApi application.
+1. Add routes
+2. Add middlewares
+3. setup logging
+"""
+
 from fastapi import FastAPI
-
-from .endpoints import public, password, scopes, oidc
-
 from fastapi.middleware.cors import CORSMiddleware
-from ..settings import get_settings
 from yumi import setup_logging
+
+from ..settings import get_settings
+from .endpoints import oidc, password, public, scopes
 
 
 def create_app() -> FastAPI:

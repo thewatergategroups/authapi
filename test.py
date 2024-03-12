@@ -1,8 +1,9 @@
 import argparse
 import os
-from dotenv import load_dotenv
-import requests
 from pprint import pprint
+
+import requests
+from dotenv import load_dotenv
 
 load_dotenv()
 

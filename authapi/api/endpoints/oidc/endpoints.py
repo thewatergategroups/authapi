@@ -1,25 +1,31 @@
+"""
+Open ID connect and oAuth Authenticated endpoints.
+Requires Admin credentials
+"""
+
 from typing import Annotated
 from uuid import UUID, uuid4
+
 from fastapi import Depends, HTTPException, Query
 from fastapi.responses import JSONResponse
 from fastapi.routing import APIRouter
 from sqlalchemy import exists, insert, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from ....deps import get_async_session
 from ....database.models import (
-    ClientModel,
     ClientGrantMap,
+    ClientModel,
     ClientRedirects,
     ClientScopeMap,
 )
+from ....deps import get_async_session
 from ...tools import blake2b_hash, generate_random_password
 from ...validator import has_admin_scope
 from .schemas import (
     ClientAddBody,
+    ClientGrantBody,
     ClientRedirectBody,
     ClientScopesBody,
-    ClientGrantBody,
 )
 
 router = APIRouter(
@@ -33,6 +39,7 @@ router = APIRouter(
 async def create_client(
     data: ClientAddBody, session: AsyncSession = Depends(get_async_session)
 ):
+    """Create a new client"""
     secret = generate_random_password()
     secret_hash = blake2b_hash(secret)
     id_ = uuid4()
@@ -84,6 +91,8 @@ async def create_client(
 
 @router.get("")
 async def get_clients(session: AsyncSession = Depends(get_async_session)):
+    """Get existing clients"""
+
     users = (await session.scalars(select(ClientModel.id_, ClientModel.name))).all()
     return users
 
@@ -93,6 +102,7 @@ async def add_client_scopes(
     data: ClientScopesBody,
     session: AsyncSession = Depends(get_async_session),
 ):
+    """add client scopes"""
     await session.execute(
         insert(ClientScopeMap).values(
             [{"client_id": data.client_id, "scope": scope} for scope in data.scopes]
@@ -106,6 +116,7 @@ async def get_client_scopes(
     client_id: UUID,
     session: AsyncSession = Depends(get_async_session),
 ):
+    """get client scopes"""
     scopes = (
         await session.scalars(
             select(ClientScopeMap).where(ClientScopeMap.client_id == client_id)
@@ -119,6 +130,7 @@ async def add_client_redirects(
     data: ClientRedirectBody,
     session: AsyncSession = Depends(get_async_session),
 ):
+    """add client redirects"""
     await session.execute(
         insert(ClientRedirects).values(
             [
@@ -135,6 +147,7 @@ async def get_client_redirects(
     client_id: UUID,
     session: AsyncSession = Depends(get_async_session),
 ):
+    """get client redirects"""
     scopes = (
         await session.scalars(
             select(ClientRedirects).where(ClientRedirects.client_id == client_id)
@@ -148,6 +161,7 @@ async def add_client_grants(
     data: ClientGrantBody,
     session: AsyncSession = Depends(get_async_session),
 ):
+    """add client grants"""
     await session.execute(
         insert(ClientGrantMap).values(
             [
@@ -164,6 +178,7 @@ async def get_client_grants(
     client_id: UUID,
     session: AsyncSession = Depends(get_async_session),
 ):
+    """get client grants"""
     scopes = (
         await session.scalars(
             select(ClientGrantMap).where(ClientGrantMap.client_id == client_id)
@@ -177,6 +192,7 @@ async def get_client(
     client_id: UUID,
     session: AsyncSession = Depends(get_async_session),
 ):
+    """get specific client information"""
     client = await session.scalar(
         select(ClientModel).where(ClientModel.id_ == client_id)
     )
@@ -193,14 +209,18 @@ async def get_client(
     }
 
 
-# @router.get("userinfo")
-# async def get_userinfo(
-#     audience: str,
-#     scopes: Annotated[list[str], Query()],
-#     subject: str,
-# ):
-#     if "openid" not in scopes:
-#         raise HTTPException(400, "requires openid scope")
-#     ### ENSURE AUD IS OPENID AUD
+@router.get("userinfo")
+async def get_userinfo(
+    audience: str,
+    scopes: Annotated[list[str], Query()],
+    subject: str,
+    session: AsyncSession = Depends(get_async_session),
+):
+    """Return client identity"""
+    if "openid" not in scopes:
+        raise HTTPException(400, "requires openid scope")
 
-#     ### GET USER DATA BASED OF SUBJECT AND RETURN IT
+    if audience != "openid":
+        raise HTTPException(400, "incorrect audience")
+
+    return await get_client(UUID(subject), session)

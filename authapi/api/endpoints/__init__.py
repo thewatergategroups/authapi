@@ -1,1 +1,1 @@
-from . import public, password, scopes, oidc
+from . import oidc, password, public, scopes
