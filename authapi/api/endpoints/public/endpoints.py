@@ -16,6 +16,8 @@ from sqlalchemy import exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from yumi import Scopes, UserInfo
 
+from authapi.api.endpoints.oidc.endpoints import get_client
+
 
 from ....database.models import (
     ClientGrantMap,
@@ -29,7 +31,7 @@ from ....deps import get_async_session
 from ....settings import get_settings
 from ....schemas import Alg, JWT
 from ...tools import blake2b_hash, generate_random_password
-from ...validator import has_admin_scope
+from ...validator import has_admin_scope, has_openid_scope, validate_jwt
 from ..oidc.schemas import (
     AUTHORIZATION_CODES,
     GrantTypes,
@@ -367,3 +369,13 @@ async def get_well_known_open_id():
         "claims_supported": JWT.get_claims(),
         "code_challenge_methods_supported": CodeChallengeMethods.get_all(),
     }
+
+
+@router.get("/userinfo")
+async def get_userinfo(
+    session: AsyncSession = Depends(get_async_session),
+    user_info: UserInfo = Depends(validate_jwt),
+    _=Depends(has_openid_scope),
+):
+    """Return client identity"""
+    return await get_client(UUID(user_info.username), session)

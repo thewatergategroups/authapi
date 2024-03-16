@@ -200,9 +200,25 @@ def test_authorization_code_flow_openid_plain_code_chal_method(
         timeout=1,
     )
     data = resp.json()
+    scopes = ["openid", "read"]
+    token = data.get("token")
     assert data.get("id_token") is not None
-    assert data.get("token") is not None
-    assert data.get("scopes") == ["openid", "read"]
+    assert token is not None
+    assert data.get("scopes") == scopes
+    resp = requests.get(
+        f"{server}/public/userinfo",
+        timeout=1,
+        headers={"Authorization": f"Bearer {token}"},
+    )
+    assert resp.json() == {
+        "id_": client_id,
+        "type": "confidential",
+        "name": "client1",
+        "description": "a test client",
+        "scopes": ["read", "write", "openid"],
+        "redirect_uris": ["http://0.0.0.0:8000"],
+        "grant_types": ["authorization_code", "implicit"],
+    }
 
 
 def test_authorization_code_flow_no_openid_s265_chal_method(

@@ -11,6 +11,7 @@ from fastapi.responses import JSONResponse
 from fastapi.routing import APIRouter
 from sqlalchemy import exists, insert, select
 from sqlalchemy.ext.asyncio import AsyncSession
+from yumi import UserInfo
 
 from ....database.models import (
     ClientGrantMap,
@@ -20,7 +21,7 @@ from ....database.models import (
 )
 from ....deps import get_async_session
 from ...tools import blake2b_hash, generate_random_password
-from ...validator import has_admin_scope
+from ...validator import has_admin_scope, validate_jwt
 from .schemas import (
     ClientAddBody,
     ClientGrantBody,
@@ -119,7 +120,7 @@ async def get_client_scopes(
     """get client scopes"""
     scopes = (
         await session.scalars(
-            select(ClientScopeMap).where(ClientScopeMap.client_id == client_id)
+            select(ClientScopeMap.scope).where(ClientScopeMap.client_id == client_id)
         )
     ).all()
     return scopes
@@ -150,7 +151,9 @@ async def get_client_redirects(
     """get client redirects"""
     scopes = (
         await session.scalars(
-            select(ClientRedirects).where(ClientRedirects.client_id == client_id)
+            select(ClientRedirects.redirect_uri).where(
+                ClientRedirects.client_id == client_id
+            )
         )
     ).all()
     return scopes
@@ -181,7 +184,9 @@ async def get_client_grants(
     """get client grants"""
     scopes = (
         await session.scalars(
-            select(ClientGrantMap).where(ClientGrantMap.client_id == client_id)
+            select(ClientGrantMap.grant_type).where(
+                ClientGrantMap.client_id == client_id
+            )
         )
     ).all()
     return scopes
@@ -202,25 +207,8 @@ async def get_client(
     redirects = await get_client_redirects(client_id, session)
     grants = await get_client_grants(client_id, session)
     return {
-        **client.as_dict(),
+        **client.as_dict(included_keys=["id_", "type", "name", "description"]),
         "scopes": scopes,
         "redirect_uris": redirects,
         "grant_types": grants,
     }
-
-
-@router.get("userinfo")
-async def get_userinfo(
-    audience: str,
-    scopes: Annotated[list[str], Query()],
-    subject: str,
-    session: AsyncSession = Depends(get_async_session),
-):
-    """Return client identity"""
-    if "openid" not in scopes:
-        raise HTTPException(400, "requires openid scope")
-
-    if audience != "openid":
-        raise HTTPException(400, "incorrect audience")
-
-    return await get_client(UUID(subject), session)
