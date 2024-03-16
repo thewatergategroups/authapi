@@ -1,5 +1,4 @@
 # pylint: disable-all
-
 """add_certs
 
 Revision ID: 6246ce2fa579

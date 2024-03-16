@@ -2,12 +2,14 @@
 Public endpoints for authentication and authorization
 """
 
+import base64
 from datetime import datetime, timedelta
+import hashlib
 from typing import Annotated
 from uuid import UUID
 
 import jwt
-from fastapi import Depends, HTTPException, Query, status
+from fastapi import Depends, Form, HTTPException, Query, status
 from fastapi.responses import RedirectResponse
 from fastapi.routing import APIRouter
 from sqlalchemy import exists, select
@@ -34,6 +36,7 @@ from ..oidc.schemas import (
     OidcTokenBody,
     ResponseTypes,
     ClientType,
+    CodeChallengeMethods,
 )
 from .schemas import UserLoginBody
 
@@ -108,12 +111,15 @@ async def get_password_flow_token(
     return {"token": token}
 
 
-@router.get("/oidc/authorize")
+@router.get("/oauth2/authorize")
 async def authorize_oidc_request(
     response_type: ResponseTypes,
     client_id: UUID,
     redirect_uri: str,
+    state: str,
     scopes: Annotated[list[str], Query()],
+    code_challenge: str | None = None,
+    code_challenge_method: CodeChallengeMethods | None = None,
     alg: Alg = Alg.EC,
     session: AsyncSession = Depends(get_async_session),
     user_info: UserInfo = Depends(has_admin_scope()),
@@ -162,15 +168,12 @@ async def authorize_oidc_request(
         raise HTTPException(401, "redirect Uri not allowed")
 
     if response_type == ResponseTypes.TOKEN:
-        token, expires_in = build_client_token(
+        token, _ = build_client_token(
             str(client_id), allowed_scopes, alg, user_info.username
         )
-        return {
-            "token": token,
-            "token_type": "Bearer",
-            "scopes": scopes,
-            "expires_in": expires_in,
-        }
+        return RedirectResponse(
+            f"{redirect_uri}?access_token={token}&token_type=Bearer&state={state}", 302
+        )
 
     elif response_type == ResponseTypes.ID_TOKEN:
         if Scopes.OPENID not in allowed_scopes:
@@ -178,19 +181,23 @@ async def authorize_oidc_request(
                 "openid scope required to be present to get an id token"
             )
         token = build_user_token(user_info.username, alg=alg)
-        return {"id_token": token}
+        return RedirectResponse(f"{redirect_uri}?id_token={token}&state={state}", 302)
 
     elif response_type == ResponseTypes.CODE:
+        if not code_challenge_method or not code_challenge:
+            raise HTTPException(400, "missing code change or code challenge method")
+
         code = generate_random_password()
         AUTHORIZATION_CODES[code] = {
             "client_id": client_id,
             "scopes": allowed_scopes,
             "username": user_info.username,
             "redirect_uri": redirect_uri,
+            "code_challenge": code_challenge,
+            "code_challenge_method": code_challenge_method,
         }
-        return {"code": code}
+        return RedirectResponse(f"{redirect_uri}?code={code}&state={state}", 302)
 
-    raise HTTPException(400, f"Response type {response_type} not implemented")
     # elif response_type == ResponseTypes.ID_T_T:
     #     token, expires_in = build_client_token(str(client_id), final_scopes, alg)
     #     return {
@@ -206,7 +213,7 @@ async def authorize_oidc_request(
 
     #     return {"id_token": token, "code": code}
 
-    # return RedirectResponse(f"{redirect_uri}?code={code}&state={state}", 302)
+    # return
 
 
 def auth_code_flow_validation(data: OidcTokenBody):
@@ -219,7 +226,26 @@ def auth_code_flow_validation(data: OidcTokenBody):
     if client_id != data.client_id:
         raise HTTPException(401, "authorization code not related to this client")
     if code_data["redirect_uri"] != data.redirect_uri:
-        raise HTTPException("redirect URI changed")
+        raise HTTPException(400, "redirect URI changed")
+
+    code_challenge_method = code_data["code_challenge_method"]
+    code_challenge = code_data["code_challenge"]
+    if code_challenge_method == CodeChallengeMethods.PLAIN:
+        if code_challenge != data.code_verifier:
+            raise HTTPException(401, "incorrect code challenge")
+    elif code_challenge_method == CodeChallengeMethods.S256:
+        hashed_code_verifier = (
+            base64.urlsafe_b64encode(
+                hashlib.sha256(data.code_verifier.encode()).digest()
+            )
+            .decode()
+            .rstrip("=")
+        )
+        if hashed_code_verifier != code_challenge:
+            raise HTTPException(401, "Incorrect code challenge")
+    else:
+        raise HTTPException(400, "Code challenge method not allowed")
+
     return code_data["scopes"], username
 
 
@@ -279,9 +305,9 @@ def build_client_token(
     )
 
 
-@router.post("/oidc/token")
+@router.post("/oauth2/token")
 async def get_token(
-    data: OidcTokenBody,
+    data: OidcTokenBody = Depends(OidcTokenBody.as_form),
     session: AsyncSession = Depends(get_async_session),
 ):
     """
@@ -328,10 +354,10 @@ async def get_well_known_open_id():
     domain = get_settings().jwt_config.jwks_server_url
     return {
         "issuer": "authapi",
-        "authorization_endpoint": f"{domain}/auth/public/oidc/authorize",
-        "token_endpoint": f"{domain}/auth/public/oidc/token",
-        "userinfo_endpoint": f"{domain}/auth/clients/userinfo",
-        "jwks_uri": f"{domain}/auth/public/keys",
+        "authorization_endpoint": f"{domain}/public/oauth2/authorize",
+        "token_endpoint": f"{domain}/public/oauth2/token",
+        "userinfo_endpoint": f"{domain}/clients/userinfo",
+        "jwks_uri": f"{domain}/public/keys",
         "response_types_supported": ResponseTypes.get_all(),
         "response_modes_supported": ["query"],
         "subject_types_supported": ClientType.get_all(),
@@ -339,5 +365,5 @@ async def get_well_known_open_id():
         "scopes_supported": [item.value for item in Scopes],
         "token_endpoint_auth_methods_supported": ["client_secret_post"],
         "claims_supported": JWT.get_claims(),
-        "code_challenge_methods_supported": ["plain", "S256"],
+        "code_challenge_methods_supported": CodeChallengeMethods.get_all(),
     }

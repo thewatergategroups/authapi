@@ -2,13 +2,21 @@
 Endpoint tests
 """
 
+import base64
+import hashlib
 import json
 from base64 import b64decode
+import secrets
+from urllib.parse import parse_qs, urlparse
 
 import requests
 from yumi import Scopes
 
-from authapi.api.endpoints.oidc.schemas import GrantTypes, ResponseTypes
+from authapi.api.endpoints.oidc.schemas import (
+    GrantTypes,
+    ResponseTypes,
+    CodeChallengeMethods,
+)
 
 from .conftest import server  # pylint: disable=unused-import
 from .helpers import create_client, get_token
@@ -53,14 +61,15 @@ def test_get_client_token(server):  # pylint: disable=redefined-outer-name
     assert data.get("scopes") == scopes
     assert data.get("type") == "confidential"
     resp = requests.post(
-        f"{server}/public/oidc/token",
-        json={
+        f"{server}/public/oauth2/token",
+        data={
             "client_id": client_id,
             "client_secret": client_secret,
             "grant_type": GrantTypes.IMPLICIT.value,
             "redirect_uri": server,
             "scopes": ["read"],
         },
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
         timeout=1,
     )
     data = resp.json()
@@ -68,7 +77,9 @@ def test_get_client_token(server):  # pylint: disable=redefined-outer-name
     assert data.get("scopes") == ["read"]
 
 
-def test_authorization_token_flow(server):  # pylint: disable=redefined-outer-name
+def test_authorization_token_flow(
+    server,
+):  # pylint: disable=redefined-outer-name
     """
     test authorization token flow
     Steps:
@@ -79,22 +90,25 @@ def test_authorization_token_flow(server):  # pylint: disable=redefined-outer-na
     """
     data = make_test_client(server)
     token = get_token(server, "admin", ["admin"])
-
     client_id = data.get("client_id")
     resp = requests.get(
-        f"{server}/public/oidc/authorize",
+        f"{server}/public/oauth2/authorize",
         params={
             "response_type": ResponseTypes.TOKEN,
             "client_id": client_id,
             "redirect_uri": server,
             "scopes": ["read"],
+            "state": "extradata",
         },
         headers={"Authorization": f"Bearer {token}"},
         timeout=1,
+        allow_redirects=False,
     )
-    data = resp.json()
-    assert data.get("token") is not None
-    assert data.get("scopes") == ["read"]
+    data = resp.headers["Location"]
+    assert "access_token=" in data
+    assert "token_type=Bearer" in data
+    assert "state=extradata" in data
+    assert server in data
 
 
 def test_authorization_id_token_flow(server):  # pylint: disable=redefined-outer-name
@@ -111,21 +125,27 @@ def test_authorization_id_token_flow(server):  # pylint: disable=redefined-outer
 
     client_id = data.get("client_id")
     resp = requests.get(
-        f"{server}/public/oidc/authorize",
+        f"{server}/public/oauth2/authorize",
         params={
             "response_type": ResponseTypes.ID_TOKEN,
             "client_id": client_id,
             "redirect_uri": server,
             "scopes": ["read", "openid"],
+            "state": "extradata",
         },
         headers={"Authorization": f"Bearer {token}"},
         timeout=1,
+        allow_redirects=False,
     )
-    data = resp.json()
-    assert data.get("id_token") is not None
+    data = resp.headers["Location"]
+    assert "id_token=" in data
+    assert "state=extradata" in data
+    assert server in data
 
 
-def test_authorization_code_flow_openid(server):  # pylint: disable=redefined-outer-name
+def test_authorization_code_flow_openid_plain_code_chal_method(
+    server,
+):  # pylint: disable=redefined-outer-name
     """
     test authorization id token flow
     Steps:
@@ -139,30 +159,44 @@ def test_authorization_code_flow_openid(server):  # pylint: disable=redefined-ou
 
     client_id = data.get("client_id")
     client_secret = data.get("client_secret")
+    code_verifier = secrets.token_urlsafe(50)
+
     resp = requests.get(
-        f"{server}/public/oidc/authorize",
+        f"{server}/public/oauth2/authorize",
         params={
             "response_type": ResponseTypes.CODE,
             "client_id": client_id,
+            "code_challenge": code_verifier,
+            "code_challenge_method": CodeChallengeMethods.PLAIN,
             "redirect_uri": server,
             "scopes": ["read", "openid"],
+            "state": "extradata",
         },
         headers={"Authorization": f"Bearer {token}"},
         timeout=1,
+        allow_redirects=False,
     )
-    data = resp.json()
-    code = data.get("code")
+    print(resp.text)
+    data = resp.headers["Location"]
+    parsed_url = urlparse(data)
+    assert "code=" in data
+    assert "state=extradata" in data
+    assert server in data
+    code = parse_qs(parsed_url.query)["code"][0]
+    assert code is not None
 
     resp = requests.post(
-        f"{server}/public/oidc/token",
-        json={
+        f"{server}/public/oauth2/token",
+        data={
             "code": code,
             "client_id": client_id,
             "client_secret": client_secret,
+            "code_verifier": code_verifier,
             "grant_type": GrantTypes.AUTHORIZATION_CODE.value,
             "redirect_uri": server,
             "scopes": ["read", "openid"],
         },
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
         timeout=1,
     )
     data = resp.json()
@@ -171,7 +205,7 @@ def test_authorization_code_flow_openid(server):  # pylint: disable=redefined-ou
     assert data.get("scopes") == ["openid", "read"]
 
 
-def test_authorization_code_flow_no_openid(
+def test_authorization_code_flow_no_openid_s265_chal_method(
     server,
 ):  # pylint: disable=redefined-outer-name
     """
@@ -185,32 +219,49 @@ def test_authorization_code_flow_no_openid(
     data = make_test_client(server)
     token = get_token(server, "admin", ["admin"])
 
+    code_verifier = secrets.token_urlsafe(50)
+    code_challenge = (
+        base64.urlsafe_b64encode(hashlib.sha256(code_verifier.encode()).digest())
+        .decode()
+        .rstrip("=")
+    )
+
     client_id = data.get("client_id")
     client_secret = data.get("client_secret")
     resp = requests.get(
-        f"{server}/public/oidc/authorize",
+        f"{server}/public/oauth2/authorize",
         params={
             "response_type": ResponseTypes.CODE,
             "client_id": client_id,
             "redirect_uri": server,
+            "code_challenge": code_challenge,
+            "code_challenge_method": CodeChallengeMethods.S256,
             "scopes": ["read"],
+            "state": "extradata",
         },
         headers={"Authorization": f"Bearer {token}"},
         timeout=1,
+        allow_redirects=False,
     )
-    data = resp.json()
-    code = data.get("code")
-
+    data = resp.headers["Location"]
+    parsed_url = urlparse(data)
+    assert "code=" in data
+    assert "state=extradata" in data
+    assert server in data
+    code = parse_qs(parsed_url.query)["code"][0]
+    assert code is not None
     resp = requests.post(
-        f"{server}/public/oidc/token",
-        json={
+        f"{server}/public/oauth2/token",
+        data={
             "code": code,
             "client_id": client_id,
             "client_secret": client_secret,
+            "code_verifier": code_verifier,
             "grant_type": GrantTypes.AUTHORIZATION_CODE.value,
             "redirect_uri": server,
             "scopes": ["read"],
         },
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
         timeout=1,
     )
     data = resp.json()

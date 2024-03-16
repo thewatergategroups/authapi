@@ -5,6 +5,7 @@ Open ID Connect and oAuth Schemas
 from enum import StrEnum
 from uuid import UUID
 
+from fastapi import Form
 from pydantic import BaseModel
 
 from ....schemas import Alg
@@ -57,9 +58,34 @@ class OidcTokenBody(BaseModel):
     client_secret: str
     grant_type: GrantTypes
     code: str | None = None
+    code_verifier: str | None = None
     redirect_uri: str
     alg: Alg = Alg.EC
     scopes: list[str]
+
+    @classmethod
+    def as_form(
+        cls,
+        client_id: UUID = Form(...),
+        client_secret: str = Form(...),
+        grant_type: GrantTypes = Form(...),
+        code: str = Form(None),
+        code_verifier: str = Form(None),
+        redirect_uri: str = Form(...),
+        alg: Alg = Form(Alg.EC),
+        scopes: list[str] = Form(...),
+    ):
+        """Allows use of this model as form data in an endpoint"""
+        return cls(
+            client_id=client_id,
+            client_secret=client_secret,
+            grant_type=grant_type,
+            code=code,
+            code_verifier=code_verifier,
+            redirect_uri=redirect_uri,
+            alg=alg,
+            scopes=scopes,
+        )
 
 
 class ClientScopesBody(BaseModel):
@@ -100,6 +126,20 @@ class ResponseTypes(StrEnum):
     # C_ID_T = "code id_token"
     # C_T = "code token"
     # C_ID_T_T = "code id_token token"
+
+    @classmethod
+    def get_all(cls):
+        """Return all enum member values"""
+        return [item.value for item in cls]
+
+
+class CodeChallengeMethods(StrEnum):
+    """
+    Used for Authorization code flow to ensure authorization code is legit
+    """
+
+    PLAIN = "plain"  # send the hash in plain text
+    S256 = "S256"  # hash the code challenge
 
     @classmethod
     def get_all(cls):
