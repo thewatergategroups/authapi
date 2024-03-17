@@ -9,3 +9,5 @@
 **/pg_data
 **/pgadmin-data
 **/certs/*
+**/secret_vals.yaml
+**/template.yaml

@@ -12,4 +12,4 @@ secrets:
   PGUSER: <SECRET>
   DB_SCHEMA: auth
   ADMIN_PASSWORD: <SECRET>
-  
+  JWKS_SERVER_URL: http://authapi.apps.svc.cluster.local:8000
