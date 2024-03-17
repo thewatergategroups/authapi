@@ -17,7 +17,7 @@ from authapi.api.endpoints.oidc.schemas import (
     ResponseTypes,
     CodeChallengeMethods,
 )
-
+from authapi.settings import get_settings
 from .conftest import server  # pylint: disable=unused-import
 from .helpers import create_client, get_token
 
@@ -34,7 +34,7 @@ def test_get_token(server):  # pylint: disable=redefined-outer-name
     token_info = json.loads(b64decode(fields[1] + "==").decode())
     assert token_info["sub"] == username
     assert token_info["aud"] == "local"
-    assert token_info["iss"] == "authapi"
+    assert token_info["iss"] == get_settings().jwt_config.jwks_server_url
     assert token_info["scopes"] == scopes
 
 

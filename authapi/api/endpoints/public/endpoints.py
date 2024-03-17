@@ -42,7 +42,7 @@ from ..oidc.schemas import (
 )
 from .schemas import UserLoginBody
 
-router = APIRouter(prefix="/public", tags=["public"])
+router = APIRouter(tags=["public"])
 
 
 @router.get("/jwks")
@@ -61,7 +61,7 @@ def build_user_token(username: str, scopes: list[str] | None = None, alg: Alg = 
         sub=username,
         exp=(now + timedelta(hours=1)).timestamp(),
         aud="local",
-        iss="authapi",
+        iss=get_settings().jwt_config.jwks_server_url,
         iat=now.timestamp(),
     )
     if scopes is not None:
@@ -290,7 +290,7 @@ def build_client_token(
         sub=client_id,
         exp=expires_in,
         aud="local",
-        iss="authapi",
+        iss=get_settings().jwt_config.jwks_server_url,
         iat=now.timestamp(),
         scopes=scopes,
     )
@@ -307,7 +307,7 @@ def build_client_token(
     )
 
 
-@router.post("/oauth2/token")
+@router.post("/token")
 async def get_token(
     data: OidcTokenBody = Depends(OidcTokenBody.as_form),
     session: AsyncSession = Depends(get_async_session),
@@ -355,11 +355,11 @@ async def get_well_known_open_id():
     """
     domain = get_settings().jwt_config.jwks_server_url
     return {
-        "issuer": "authapi",
-        "authorization_endpoint": f"{domain}/public/oauth2/authorize",
-        "token_endpoint": f"{domain}/public/oauth2/token",
-        "userinfo_endpoint": f"{domain}/clients/userinfo",
-        "jwks_uri": f"{domain}/public/keys",
+        "issuer": domain,
+        "authorization_endpoint": f"{domain}/oauth2/authorize",
+        "token_endpoint": f"{domain}/token",
+        "userinfo_endpoint": f"{domain}/userinfo",
+        "jwks_uri": f"{domain}/keys",
         "response_types_supported": ResponseTypes.get_all(),
         "response_modes_supported": ["query"],
         "subject_types_supported": ClientType.get_all(),
