@@ -9,12 +9,12 @@ from typing import Annotated
 from uuid import UUID
 
 import jwt
-from fastapi import Depends, Form, HTTPException, Query, status
-from fastapi.responses import RedirectResponse
+from fastapi import Depends, HTTPException, Query, status
+from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.routing import APIRouter
 from sqlalchemy import exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from yumi import Scopes, UserInfo
+from yumi import Scopes, UserInfo, Jwt
 
 from authapi.api.endpoints.oidc.endpoints import get_client
 
@@ -29,7 +29,7 @@ from ....database.models import (
 )
 from ....deps import get_async_session
 from ....settings import get_settings
-from ....schemas import Alg, JWT
+from ....schemas import Alg
 from ...tools import blake2b_hash, generate_random_password
 from ...validator import has_admin_scope, has_openid_scope, validate_jwt
 from ..oidc.schemas import (
@@ -45,7 +45,7 @@ from .schemas import UserLoginBody
 router = APIRouter(tags=["public"])
 
 
-@router.get("/jwks")
+@router.get("/keys")
 async def get_jwks():
     """
     Returns avaliable public keys
@@ -54,13 +54,18 @@ async def get_jwks():
     return {"keys": Alg.get_public_keys()}
 
 
-def build_user_token(username: str, scopes: list[str] | None = None, alg: Alg = Alg.EC):
+def build_user_token(
+    username: str,
+    scopes: list[str] | None = None,
+    alg: Alg = Alg.EC,
+    audience: str = "local",
+):
     """Function to creates a user token based on the passed in information"""
     now = datetime.now()
-    payload = JWT(
+    payload = Jwt(
         sub=username,
         exp=(now + timedelta(hours=1)).timestamp(),
-        aud="local",
+        aud=audience,
         iss=get_settings().jwt_config.jwks_server_url,
         iat=now.timestamp(),
     )
@@ -110,7 +115,9 @@ async def get_password_flow_token(
         return RedirectResponse(
             data.redirect_uri, 302, headers={"Authorization": f"Bearer {token}"}
         )
-    return {"token": token}
+    response = JSONResponse({"token": token}, 200)
+    response.set_cookie("token", token)
+    return response
 
 
 @router.get("/oauth2/authorize")
@@ -119,7 +126,7 @@ async def authorize_oidc_request(
     client_id: UUID,
     redirect_uri: str,
     state: str,
-    scopes: Annotated[list[str], Query()],
+    scope: str,
     code_challenge: str | None = None,
     code_challenge_method: CodeChallengeMethods | None = None,
     alg: Alg = Alg.EC,
@@ -130,7 +137,7 @@ async def authorize_oidc_request(
     Authorization endpoint for OIDC and oAuth flows.
     Authenticated with a User token
     """
-
+    scopes = scope.split(" ")
     grant_allowed = (
         await session.execute(
             select(ClientGrantMap.grant_type).where(
@@ -186,8 +193,6 @@ async def authorize_oidc_request(
         return RedirectResponse(f"{redirect_uri}?id_token={token}&state={state}", 302)
 
     elif response_type == ResponseTypes.CODE:
-        if not code_challenge_method or not code_challenge:
-            raise HTTPException(400, "missing code change or code challenge method")
 
         code = generate_random_password()
         AUTHORIZATION_CODES[code] = {
@@ -245,7 +250,7 @@ def auth_code_flow_validation(data: OidcTokenBody):
         )
         if hashed_code_verifier != code_challenge:
             raise HTTPException(401, "Incorrect code challenge")
-    else:
+    elif code_challenge is not None and code_challenge_method is not None:
         raise HTTPException(400, "Code challenge method not allowed")
 
     return code_data["scopes"], username
@@ -253,6 +258,10 @@ def auth_code_flow_validation(data: OidcTokenBody):
 
 async def implicit_flow(data: OidcTokenBody, session: AsyncSession):
     """validate input parameters to the implicit flow"""
+
+    if data.scope is None:
+        raise HTTPException(400, "scope is a required parameter")
+
     grant_allowed = (
         await session.execute(
             select(ClientGrantMap.grant_type).where(
@@ -264,12 +273,12 @@ async def implicit_flow(data: OidcTokenBody, session: AsyncSession):
 
     if not grant_allowed:
         raise HTTPException(401, "grant type not allowed")
-
+    scopes = data.scope.split(" ")
     return (
         (
             await session.execute(
                 select(ClientScopeMap.scope).where(
-                    ClientScopeMap.scope.in_(data.scopes),
+                    ClientScopeMap.scope.in_(scopes),
                     ClientScopeMap.client_id == data.client_id,
                 )
             )
@@ -280,16 +289,20 @@ async def implicit_flow(data: OidcTokenBody, session: AsyncSession):
 
 
 def build_client_token(
-    client_id: str, scopes: list[str], alg: Alg, username: str | None = None
+    client_id: str,
+    scopes: list[str],
+    alg: Alg,
+    username: str | None = None,
+    audience: str = "local",
 ):
     """build a client token based on the passed in information"""
     now = datetime.now()
 
-    expires_in = (now + timedelta(hours=1)).timestamp()
-    payload = JWT(
+    expires_in = int((now + timedelta(hours=1)).timestamp())
+    payload = Jwt(
         sub=client_id,
         exp=expires_in,
-        aud="local",
+        aud=audience,
         iss=get_settings().jwt_config.jwks_server_url,
         iat=now.timestamp(),
         scopes=scopes,
@@ -332,16 +345,16 @@ async def get_token(
     elif data.grant_type == GrantTypes.IMPLICIT:
         scopes = await implicit_flow(data, session)
 
-    token, expires_in = build_client_token(str(data.client_id), data.scopes, data.alg)
+    token, expires_in = build_client_token(str(data.client_id), scopes, data.alg)
     response = {
-        "token": token,
+        "access_token": token,
         "token_type": "Bearer",
         "scopes": scopes,
         "expires_in": expires_in,
     }
 
     if Scopes.OPENID in scopes:
-        user_token = build_user_token(username)
+        user_token = build_user_token(username, audience=str(data.client_id))
         response["id_token"] = user_token
 
     return response
@@ -366,7 +379,7 @@ async def get_well_known_open_id():
         "id_token_signing_alg_values_supported": [alg.value for alg in Alg],
         "scopes_supported": [item.value for item in Scopes],
         "token_endpoint_auth_methods_supported": ["client_secret_post"],
-        "claims_supported": JWT.get_claims(),
+        "claims_supported": Jwt.get_claims(),
         "code_challenge_methods_supported": CodeChallengeMethods.get_all(),
     }
 

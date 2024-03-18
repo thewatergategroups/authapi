@@ -1971,13 +1971,13 @@ files = [
 
 [[package]]
 name = "yumi"
-version = "0.1.3"
+version = "0.1.6"
 description = "helper package"
 optional = false
 python-versions = ">=3.11,<3.12"
 files = [
-    {file = "yumi-0.1.3-py3-none-any.whl", hash = "sha256:8e5ded2cc8359ec379d5dfacd267d5c14f7acfdb5ade5bd9146bb7614fbdbe88"},
-    {file = "yumi-0.1.3.tar.gz", hash = "sha256:dbb7f12ff5a2e55c5bbb8531aafda3f574089593f5873ddede34a8ca210c6407"},
+    {file = "yumi-0.1.6-py3-none-any.whl", hash = "sha256:d5508f67999291456c5686a37e85e5a7567c7441cc3d5b27c7f1a01cfa6506e2"},
+    {file = "yumi-0.1.6.tar.gz", hash = "sha256:120cd45fb442ff623d336bd39a0e6d14e84b6b4f1e2ac9a5cf401cb5e97c32d9"},
 ]
 
 [package.dependencies]

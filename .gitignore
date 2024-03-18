@@ -11,3 +11,4 @@
 **/certs/*
 **/secret_vals.yaml
 **/template.yaml
+**/argocd/*

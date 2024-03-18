@@ -25,7 +25,7 @@ async def add_scope(
     data: ScopeBody, session: AsyncSession = Depends(get_async_session)
 ):
     """Add new scope if it doesnt exist"""
-    does_exists = await session.execute(
+    does_exists = await session.scalar(
         select(exists(ScopesModel)).where(ScopesModel.id_ == data.scope)
     )
     if does_exists:

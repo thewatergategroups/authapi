@@ -10,6 +10,7 @@ from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from yumi import NotAuthorized, Scopes, UserInfo
 
 from ..deps import get_jwt_client
+from ..settings import get_settings
 
 
 def validate_jwt(
@@ -23,7 +24,10 @@ def validate_jwt(
     2. the token cookie
     """
     try:
-        return get_jwt_client().validate_jwt(auth.credentials if auth else token)
+        return get_jwt_client().validate_jwt(
+            auth.credentials if auth else token,
+            issuer=get_settings().jwt_config.jwks_server_url,
+        )
     except NotAuthorized as exc:
         raise HTTPException(
             status.HTTP_401_UNAUTHORIZED, "could not verify token"

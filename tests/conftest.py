@@ -31,6 +31,7 @@ def setenv(settings: Settings):
     settings.db_settings.db_schema = "auth"
     settings.admin_password = "password"
     settings.salt = "salt"
+    settings.jwt_config.jwks_server_url = "http://0.0.0.0:8000"
 
 
 def app():

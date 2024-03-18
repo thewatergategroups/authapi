@@ -13,27 +13,10 @@ from cryptography.hazmat.primitives.asymmetric import ec, rsa
 from pydantic import BaseModel
 from sqlalchemy import insert, select
 from sqlalchemy.orm import Session
-from yumi import Algorithms, Scopes
+from yumi import Algorithms
 
 from .database.models import CertModel
 from .deps import get_sync_sessionm
-
-
-class JWT(BaseModel):
-    """JWT model"""
-
-    sub: str
-    aud: str
-    iss: str
-    iat: float
-    exp: float
-    du: str | None = None
-    scopes: list[Scopes] | None = None
-
-    @classmethod
-    def get_claims(cls):
-        """Return JWT supported claims"""
-        return [value for value in cls.__fields__.keys() if value != "scopes"]
 
 
 class Jwk(BaseModel):
@@ -46,7 +29,10 @@ class Jwk(BaseModel):
     @staticmethod
     def encode(value: int):
         """return a base64 encoded equivalent of a passed in integer"""
-        return base64.b64encode(value.to_bytes(length=(value.bit_length() + 7) // 8))
+        encoded_bytes = value.to_bytes(
+            length=(value.bit_length() + 7) // 8, byteorder="big"
+        )
+        return base64.urlsafe_b64encode(encoded_bytes).rstrip(b"=").decode("ascii")
 
     @classmethod
     def get(cls, _: Any):

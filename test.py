@@ -1,3 +1,5 @@
+"""Test requests"""
+
 import argparse
 import os
 from pprint import pprint
@@ -11,25 +13,29 @@ SERVER_URL = "http://localhost:8000"
 
 
 def get_headers():
+    """Get token header"""
     token = get_token()["token"]
     headers = {"Authorization": f"Bearer {token}"}
     return headers
 
 
 def get_token():
+    """Get user token"""
     resp = requests.post(
-        f"{SERVER_URL}/public/login",
+        f"{SERVER_URL}/login",
         json={
             "username": "admin",
             "password": os.environ["ADMIN_PASSWORD"],
             "scopes": ["admin"],
             "alg": "ES256",
         },
+        timeout=2,
     )
     return resp.json()
 
 
 def create_client():
+    """Request to create a client"""
     resp = requests.post(
         f"{SERVER_URL}/clients/create",
         headers=get_headers(),
@@ -41,21 +47,25 @@ def create_client():
             "grant_types": ["authorization_code"],
             "scopes": ["admin"],
         },
+        timeout=2,
     )
     return resp.json()
 
 
-def get_client(client_id: str):
+def get_client(cl_id: str):
+    """get an existing client"""
     resp = requests.get(
         f"{SERVER_URL}/clients/client",
-        params={"client_id": client_id},
+        params={"client_id": cl_id},
         headers=get_headers(),
+        timeout=2,
     )
     return resp.json()
 
 
 def get_clients():
-    resp = requests.get(f"{SERVER_URL}/clients", headers=get_headers())
+    """get all clients"""
+    resp = requests.get(f"{SERVER_URL}/clients", headers=get_headers(), timeout=2)
     return resp.json()
 
 

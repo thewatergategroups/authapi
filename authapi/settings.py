@@ -19,7 +19,7 @@ class Settings(BaseSettings):
         env_script_location=f"{pathlib.Path(__file__).parent.resolve()}/database/alembic"
     )
     log_config: LogConfig = LogConfig()
-    jwt_config: JwtConfig = JwtConfig(jwks_server_url="http://0.0.0.0:8000")
+    jwt_config: JwtConfig = JwtConfig()
 
 
 @lru_cache

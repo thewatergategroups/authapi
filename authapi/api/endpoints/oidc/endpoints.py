@@ -3,15 +3,13 @@ Open ID connect and oAuth Authenticated endpoints.
 Requires Admin credentials
 """
 
-from typing import Annotated
 from uuid import UUID, uuid4
 
-from fastapi import Depends, HTTPException, Query
+from fastapi import Depends, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.routing import APIRouter
-from sqlalchemy import exists, insert, select
+from sqlalchemy import exists, insert, select, delete
 from sqlalchemy.ext.asyncio import AsyncSession
-from yumi import UserInfo
 
 from ....database.models import (
     ClientGrantMap,
@@ -21,7 +19,7 @@ from ....database.models import (
 )
 from ....deps import get_async_session
 from ...tools import blake2b_hash, generate_random_password
-from ...validator import has_admin_scope, validate_jwt
+from ...validator import has_admin_scope
 from .schemas import (
     ClientAddBody,
     ClientGrantBody,
@@ -126,6 +124,21 @@ async def get_client_scopes(
     return scopes
 
 
+@router.delete("/scopes")
+async def delete_client_scopes(
+    data: ClientScopesBody,
+    session: AsyncSession = Depends(get_async_session),
+):
+    """delete client scopes"""
+    await session.execute(
+        delete(ClientScopeMap).where(
+            ClientScopeMap.client_id == data.client_id,
+            ClientScopeMap.scope.in_(data.scopes),
+        )
+    )
+    return {"detail": "success"}
+
+
 @router.post("/redirect")
 async def add_client_redirects(
     data: ClientRedirectBody,
@@ -135,7 +148,7 @@ async def add_client_redirects(
     await session.execute(
         insert(ClientRedirects).values(
             [
-                {"client_id": data.client_id, "scope": redirect}
+                {"client_id": data.client_id, "redirect_uri": redirect}
                 for redirect in data.redirect_uris
             ]
         )
@@ -157,6 +170,21 @@ async def get_client_redirects(
         )
     ).all()
     return scopes
+
+
+@router.delete("/redirect")
+async def delete_client_redirects(
+    data: ClientRedirectBody,
+    session: AsyncSession = Depends(get_async_session),
+):
+    """delete client redirects"""
+    await session.execute(
+        delete(ClientRedirects).where(
+            ClientRedirects.client_id == data.client_id,
+            ClientRedirects.redirect_uri.in_(data.redirect_uris),
+        )
+    )
+    return {"detail": "success"}
 
 
 @router.post("/grants")
@@ -190,6 +218,21 @@ async def get_client_grants(
         )
     ).all()
     return scopes
+
+
+@router.delete("/grants")
+async def delete_client_grants(
+    data: ClientGrantBody,
+    session: AsyncSession = Depends(get_async_session),
+):
+    """delete client grants"""
+    await session.execute(
+        delete(ClientGrantMap).where(
+            ClientGrantMap.client_id == data.client_id,
+            ClientGrantMap.grant_type.in_(data.grants),
+        )
+    )
+    return {"detail": "success"}
 
 
 @router.get("/client")

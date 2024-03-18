@@ -61,7 +61,7 @@ class OidcTokenBody(BaseModel):
     code_verifier: str | None = None
     redirect_uri: str
     alg: Alg = Alg.EC
-    scopes: list[str]
+    scope: str | None
 
     @classmethod
     def as_form(
@@ -73,7 +73,7 @@ class OidcTokenBody(BaseModel):
         code_verifier: str = Form(None),
         redirect_uri: str = Form(...),
         alg: Alg = Form(Alg.EC),
-        scopes: list[str] = Form(...),
+        scope: str = Form(None),
     ):
         """Allows use of this model as form data in an endpoint"""
         return cls(
@@ -84,7 +84,7 @@ class OidcTokenBody(BaseModel):
             code_verifier=code_verifier,
             redirect_uri=redirect_uri,
             alg=alg,
-            scopes=scopes,
+            scope=scope,
         )
 
 

@@ -61,7 +61,7 @@ def test_get_client_token(server):  # pylint: disable=redefined-outer-name
     assert data.get("scopes") == scopes
     assert data.get("type") == "confidential"
     resp = requests.post(
-        f"{server}/public/oauth2/token",
+        f"{server}/token",
         data={
             "client_id": client_id,
             "client_secret": client_secret,
@@ -92,7 +92,7 @@ def test_authorization_token_flow(
     token = get_token(server, "admin", ["admin"])
     client_id = data.get("client_id")
     resp = requests.get(
-        f"{server}/public/oauth2/authorize",
+        f"{server}/oauth2/authorize",
         params={
             "response_type": ResponseTypes.TOKEN,
             "client_id": client_id,
@@ -125,7 +125,7 @@ def test_authorization_id_token_flow(server):  # pylint: disable=redefined-outer
 
     client_id = data.get("client_id")
     resp = requests.get(
-        f"{server}/public/oauth2/authorize",
+        f"{server}/oauth2/authorize",
         params={
             "response_type": ResponseTypes.ID_TOKEN,
             "client_id": client_id,
@@ -162,7 +162,7 @@ def test_authorization_code_flow_openid_plain_code_chal_method(
     code_verifier = secrets.token_urlsafe(50)
 
     resp = requests.get(
-        f"{server}/public/oauth2/authorize",
+        f"{server}/oauth2/authorize",
         params={
             "response_type": ResponseTypes.CODE,
             "client_id": client_id,
@@ -186,7 +186,7 @@ def test_authorization_code_flow_openid_plain_code_chal_method(
     assert code is not None
 
     resp = requests.post(
-        f"{server}/public/oauth2/token",
+        f"{server}/token",
         data={
             "code": code,
             "client_id": client_id,
@@ -206,7 +206,7 @@ def test_authorization_code_flow_openid_plain_code_chal_method(
     assert token is not None
     assert data.get("scopes") == scopes
     resp = requests.get(
-        f"{server}/public/userinfo",
+        f"{server}/userinfo",
         timeout=1,
         headers={"Authorization": f"Bearer {token}"},
     )
@@ -245,7 +245,7 @@ def test_authorization_code_flow_no_openid_s265_chal_method(
     client_id = data.get("client_id")
     client_secret = data.get("client_secret")
     resp = requests.get(
-        f"{server}/public/oauth2/authorize",
+        f"{server}/oauth2/authorize",
         params={
             "response_type": ResponseTypes.CODE,
             "client_id": client_id,
@@ -267,7 +267,7 @@ def test_authorization_code_flow_no_openid_s265_chal_method(
     code = parse_qs(parsed_url.query)["code"][0]
     assert code is not None
     resp = requests.post(
-        f"{server}/public/oauth2/token",
+        f"{server}/token",
         data={
             "code": code,
             "client_id": client_id,

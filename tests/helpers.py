@@ -12,7 +12,7 @@ from authapi.schemas import Alg
 def get_token(url: str, username: str, scopes: list[str]):
     """Get a User token"""
     response = requests.post(
-        f"{url}/public/login",
+        f"{url}/login",
         json=UserLoginBody(
             username=username,
             password="password",
