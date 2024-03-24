@@ -5,11 +5,10 @@ Public endpoints for authentication and authorization
 import base64
 from datetime import datetime, timedelta
 import hashlib
-from typing import Annotated
 from uuid import UUID
 
 import jwt
-from fastapi import Depends, HTTPException, Query, status
+from fastapi import Depends, HTTPException, status
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.routing import APIRouter
 from sqlalchemy import exists, select
@@ -72,7 +71,7 @@ def build_user_token(
     if scopes is not None:
         payload.scopes = scopes
     return jwt.encode(
-        payload.dict(exclude_none=True),
+        payload.model_dump(exclude_none=True),
         alg.load_private_key(),
         algorithm=alg.value,
         headers={"kid": alg.load_public_key()["kid"]},
@@ -311,7 +310,7 @@ def build_client_token(
         payload.du = username
     return (
         jwt.encode(
-            payload.dict(exclude_none=True),
+            payload.model_dump(exclude_none=True),
             alg.load_private_key(),
             algorithm=alg.value,
             headers={"kid": alg.load_public_key()["kid"]},

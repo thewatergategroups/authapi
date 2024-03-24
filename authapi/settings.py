@@ -5,7 +5,7 @@ Application Settings
 import pathlib
 from functools import lru_cache
 
-from pydantic import BaseSettings
+from pydantic_settings import BaseSettings
 from trekkers.config import DbSettings
 from yumi import JwtConfig, LogConfig
 

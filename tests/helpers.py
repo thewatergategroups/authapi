@@ -18,7 +18,7 @@ def get_token(url: str, username: str, scopes: list[str]):
             password="password",
             scopes=scopes,
             alg=Alg.EC,
-        ).dict(),
+        ).model_dump(),
         timeout=1,
     )
     data = response.json()
@@ -47,7 +47,7 @@ def create_client(
             grant_types=grant_types,
             scopes=client_scopes,
             type=client_type,
-        ).dict(),
+        ).model_dump(),
         headers={"Authorization": f"Bearer {token}"},
         timeout=1,
     )

@@ -135,7 +135,7 @@ class Alg(StrEnum):
         private_key = self.load_private_key()
         public_key = private_key.public_key()
         public_numbers = public_key.public_numbers()
-        return self.model.get(public_numbers).dict()
+        return self.model.get(public_numbers).model_dump()
 
     def generate_private_key(self):
         """Generate a private key for a particular algorithm"""

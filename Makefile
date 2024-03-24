@@ -1,31 +1,47 @@
 REPOSITORY := authapi
 include ~/pypi_creds
+SHELL := /bin/bash
 
 build:
 	docker build --network=host \
-	-f docker/Dockerfile \
+	-f ./Dockerfile \
 	--build-arg="PYPI_USER=${PYPI_USER}" \
 	--build-arg="PYPI_PASS=${PYPI_PASS}" \
-	. -t $(REPOSITORY)
-
-run: build up
-
-api:
-	docker compose run api 
+	--target development \
+	-t $(REPOSITORY) \
+	. 
 
 up: 
 	docker compose up -d --remove-orphans
+	if [ "$(PGADMIN)" == "true" ]; then docker compose --profile pgadmin up -d; fi
+	echo "sleeping to allow services to start up..."
+	sleep 15
+	export PGADMIN=$(PGADMIN) && bash ./scripts/browser.sh
 	docker compose logs -f 
+
+pgadmin: 
+	docker compose --profile pgadmin up -d
+	echo "sleeping to allow services to start up..."
+	sleep 15
+	export PGADMIN=true && \
+	export DOCS=false && \
+	bash ./scripts/browser.sh
 
 debug:
 	docker compose run -it $(REPOSITORY) bash
 
 down: 
-	docker compose down
+	docker compose --profile "*" down
 
 
-push: build
-	docker tag $(REPOSITORY):latest ghcr.io/1ndistinct/$(REPOSITORY):latest
+push:
+	docker build --network=host \
+	-f ./Dockerfile \
+	--build-arg="PYPI_USER=${PYPI_USER}" \
+	--build-arg="PYPI_PASS=${PYPI_PASS}" \
+	--target production \
+	-t ghcr.io/1ndistinct/$(REPOSITORY):latest \
+	. 
 	docker push  ghcr.io/1ndistinct/$(REPOSITORY):latest
 
 template:

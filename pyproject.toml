@@ -7,13 +7,16 @@ authors = ["Ciaran <ciaranmckey@gmail.com>"]
 
 [tool.poetry.dependencies]
 python = "~3.11"
-pydantic = "^1.10.11"
+pydantic = "^2"
 numpy = "^1.25.1"
-fastapi = "^0.100.0"
+fastapi = "^0.110.0"
 uvicorn = "^0.23.1"
-trekkers = { version = "*", source = "kube" }
-yumi = { version = "*", source = "kube" }
 python-multipart = "^0.0.9"
+
+
+[tool.poetry.group.local.dependencies]
+yumi = { version = "^0.2", source = "kube" }
+trekkers = { version = "^0.2", source = "kube" }
 
 [tool.poetry.group.dev.dependencies]
 mypy = "^1.4.1"

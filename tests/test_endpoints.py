@@ -67,13 +67,13 @@ def test_get_client_token(server):  # pylint: disable=redefined-outer-name
             "client_secret": client_secret,
             "grant_type": GrantTypes.IMPLICIT.value,
             "redirect_uri": server,
-            "scopes": ["read"],
+            "scope": "read",
         },
         headers={"Content-Type": "application/x-www-form-urlencoded"},
         timeout=1,
     )
     data = resp.json()
-    assert data.get("token") is not None
+    assert data.get("access_token") is not None
     assert data.get("scopes") == ["read"]
 
 
@@ -97,7 +97,7 @@ def test_authorization_token_flow(
             "response_type": ResponseTypes.TOKEN,
             "client_id": client_id,
             "redirect_uri": server,
-            "scopes": ["read"],
+            "scope": "read",
             "state": "extradata",
         },
         headers={"Authorization": f"Bearer {token}"},
@@ -130,7 +130,7 @@ def test_authorization_id_token_flow(server):  # pylint: disable=redefined-outer
             "response_type": ResponseTypes.ID_TOKEN,
             "client_id": client_id,
             "redirect_uri": server,
-            "scopes": ["read", "openid"],
+            "scope": "read openid",
             "state": "extradata",
         },
         headers={"Authorization": f"Bearer {token}"},
@@ -169,7 +169,7 @@ def test_authorization_code_flow_openid_plain_code_chal_method(
             "code_challenge": code_verifier,
             "code_challenge_method": CodeChallengeMethods.PLAIN,
             "redirect_uri": server,
-            "scopes": ["read", "openid"],
+            "scope": "read openid",
             "state": "extradata",
         },
         headers={"Authorization": f"Bearer {token}"},
@@ -194,14 +194,14 @@ def test_authorization_code_flow_openid_plain_code_chal_method(
             "code_verifier": code_verifier,
             "grant_type": GrantTypes.AUTHORIZATION_CODE.value,
             "redirect_uri": server,
-            "scopes": ["read", "openid"],
+            "scopes": "read openid",
         },
         headers={"Content-Type": "application/x-www-form-urlencoded"},
         timeout=1,
     )
     data = resp.json()
     scopes = ["openid", "read"]
-    token = data.get("token")
+    token = data.get("access_token")
     assert data.get("id_token") is not None
     assert token is not None
     assert data.get("scopes") == scopes
@@ -252,7 +252,7 @@ def test_authorization_code_flow_no_openid_s265_chal_method(
             "redirect_uri": server,
             "code_challenge": code_challenge,
             "code_challenge_method": CodeChallengeMethods.S256,
-            "scopes": ["read"],
+            "scope": "read",
             "state": "extradata",
         },
         headers={"Authorization": f"Bearer {token}"},
@@ -275,12 +275,12 @@ def test_authorization_code_flow_no_openid_s265_chal_method(
             "code_verifier": code_verifier,
             "grant_type": GrantTypes.AUTHORIZATION_CODE.value,
             "redirect_uri": server,
-            "scopes": ["read"],
+            "scope": "read",
         },
         headers={"Content-Type": "application/x-www-form-urlencoded"},
         timeout=1,
     )
     data = resp.json()
     assert data.get("id_token") is None
-    assert data.get("token") is not None
+    assert data.get("access_token") is not None
     assert data.get("scopes") == ["read"]
