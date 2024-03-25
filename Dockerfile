@@ -12,6 +12,8 @@ RUN groupadd app && useradd -g app --home-dir /app --create-home app
 WORKDIR /app 
 COPY  ./scripts/start.sh ./
 COPY ./authapi ./authapi
+COPY ./templates ./templates
+COPY ./static ./static
 RUN chown -R app /app && chmod -R 700 /app
 ENTRYPOINT ["bash","start.sh"]
 

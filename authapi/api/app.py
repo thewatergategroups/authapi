@@ -7,6 +7,7 @@ Create the FastApi application.
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from yumi import setup_logging
 
 from ..settings import get_settings
@@ -34,5 +35,5 @@ def create_app() -> FastAPI:
     app.include_router(scopes.router)
     app.include_router(password.router)
     app.include_router(oidc.router)
-
+    app.mount("/static", StaticFiles(directory="static"), name="static")
     return app

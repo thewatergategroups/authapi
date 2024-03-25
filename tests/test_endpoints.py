@@ -35,7 +35,7 @@ def test_get_token(server):  # pylint: disable=redefined-outer-name
     assert token_info["sub"] == username
     assert token_info["aud"] == "local"
     assert token_info["iss"] == get_settings().jwt_config.jwks_server_url
-    assert token_info["scopes"] == scopes
+    assert token_info["scopes"] == ["admin"]  ## hasn't been given read and write
 
 
 def make_test_client(server):  # pylint: disable=redefined-outer-name

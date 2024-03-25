@@ -13,16 +13,17 @@ def get_token(url: str, username: str, scopes: list[str]):
     """Get a User token"""
     response = requests.post(
         f"{url}/login",
-        json=UserLoginBody(
+        data=UserLoginBody(
             username=username,
             password="password",
-            scopes=scopes,
+            scope=" ".join(scopes),
             alg=Alg.EC,
         ).model_dump(),
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
         timeout=1,
+        allow_redirects=False,
     )
-    data = response.json()
-    return data.get("token", "")
+    return response.cookies.get("token")
 
 
 def create_client(

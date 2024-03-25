@@ -30,7 +30,7 @@ def validate_jwt(
         )
     except NotAuthorized as exc:
         raise HTTPException(
-            status.HTTP_401_UNAUTHORIZED, "could not verify token"
+            303, "You are not authenticated", {"Location": "/login"}
         ) from exc
 
 

@@ -5,11 +5,13 @@ Public endpoints for authentication and authorization
 import base64
 from datetime import datetime, timedelta
 import hashlib
+import logging
 from uuid import UUID
 
+from fastapi.templating import Jinja2Templates
 import jwt
-from fastapi import Depends, HTTPException, status
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi import Depends, HTTPException, Request, status
+from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.routing import APIRouter
 from sqlalchemy import exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -26,7 +28,7 @@ from ....database.models import (
     UserModel,
     UserScopeModel,
 )
-from ....deps import get_async_session
+from ....deps import get_async_session, get_templates
 from ....settings import get_settings
 from ....schemas import Alg
 from ...tools import blake2b_hash, generate_random_password
@@ -78,9 +80,15 @@ def build_user_token(
     )
 
 
+@router.get("/login", response_class=HTMLResponse)
+async def get_login(request: Request):
+    """Serve login page"""
+    return get_templates().TemplateResponse("login.html", {"request": request})
+
+
 @router.post("/login")
 async def get_password_flow_token(
-    data: UserLoginBody,
+    data: UserLoginBody = Depends(UserLoginBody.as_form),
     session: AsyncSession = Depends(get_async_session),
 ):
     """
@@ -94,7 +102,6 @@ async def get_password_flow_token(
     )
     if not us_exists:
         raise HTTPException(401, "Unauthorized")
-
     scopes = (
         await session.scalars(
             select(UserScopeModel.scope_id).where(
@@ -102,19 +109,17 @@ async def get_password_flow_token(
             )
         )
     ).all()
-    allowed_scopes = [scope for scope in data.scopes if scope in scopes]
+    allowed_scopes = scopes
+    if data.scope is not None:
+        allowed_scopes = [scope for scope in data.scope.split(" ") if scope in scopes]
 
     if not allowed_scopes:
         raise HTTPException(
             status.HTTP_401_UNAUTHORIZED,
             "user does not have any of the requested scope",
         )
-    token = build_user_token(data.username, data.scopes, data.alg)
-    if data.redirect_uri is not None:
-        return RedirectResponse(
-            data.redirect_uri, 302, headers={"Authorization": f"Bearer {token}"}
-        )
-    response = JSONResponse({"token": token}, 200)
+    token = build_user_token(data.username, allowed_scopes, data.alg)
+    response = RedirectResponse("/docs", 303)
     response.set_cookie("token", token)
     return response
 
