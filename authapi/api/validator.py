@@ -7,6 +7,7 @@ from typing import Annotated
 
 from fastapi import Cookie, Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from urllib.parse import quote
 from yumi import NotAuthorized, Scopes, UserInfo
 
 from ..deps import get_jwt_client
@@ -30,11 +31,11 @@ def validate_jwt(
             issuer=get_settings().jwt_config.jwks_server_url,
         )
     except NotAuthorized as exc:
-        raise HTTPException(
-            303,
-            "You are not authenticated",
-            {"Location": "/login", "Set-Cookie": f"original_url={str(request.url)}"},
-        ) from exc
+        redirect_url = quote(f"{request.url}?{request.query_params}")
+        headers = {
+            "Location": f"/login?redirect_url={redirect_url}",
+        }
+        raise HTTPException(303, "You are not authenticated", headers) from exc
 
 
 def has_admin_scope():

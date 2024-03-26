@@ -15,14 +15,16 @@ class UserLoginBody(BaseModel):
     password: str
     scope: str | None
     alg: Alg = Alg.EC
+    redirect_url: str | None
 
     @classmethod
     def as_form(
         cls,
         username: str = Form(...),
         password: str = Form(...),
-        scope: str = Form(None),
+        scope: str | None = Form(None),
         alg: Alg = Form(Alg.EC),
+        redirect_url: str | None = Form(None),
     ):
         """Allows use of this model as form data in an endpoint"""
         return cls(
@@ -30,4 +32,5 @@ class UserLoginBody(BaseModel):
             password=password,
             scope=scope,
             alg=alg,
+            redirect_url=redirect_url,
         )

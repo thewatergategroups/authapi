@@ -6,17 +6,15 @@ import base64
 from datetime import datetime, timedelta
 import hashlib
 from uuid import UUID
-
-from fastapi.templating import Jinja2Templates
 import jwt
-from fastapi import Cookie, Depends, HTTPException, Header, Request, status
+from fastapi import Depends, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.routing import APIRouter
 from sqlalchemy import exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from yumi import Scopes, UserInfo, Jwt
 
-from ..oidc.endpoints import get_client
+from authapi.api.endpoints.oidc.endpoints import get_client
 
 
 from ....database.models import (
@@ -80,15 +78,16 @@ def build_user_token(
 
 
 @router.get("/login", response_class=HTMLResponse)
-async def get_login(request: Request):
+async def get_login(request: Request, redirect_url: str = None):
     """Serve login page"""
-    return get_templates().TemplateResponse("login.html", {"request": request})
+    return get_templates().TemplateResponse(
+        "login.html", {"request": request, "redirect_url": redirect_url}
+    )
 
 
 @router.post("/login")
 async def get_password_flow_token(
     data: UserLoginBody = Depends(UserLoginBody.as_form),
-    original_url: str = Cookie(None),
     session: AsyncSession = Depends(get_async_session),
 ):
     """
@@ -118,13 +117,12 @@ async def get_password_flow_token(
             status.HTTP_401_UNAUTHORIZED,
             "user does not have any of the requested scope",
         )
-
     token = build_user_token(data.username, allowed_scopes, data.alg)
     response = JSONResponse({"token": token}, 200)
-    if original_url:
-        response = RedirectResponse(original_url, 303)
+    if data.redirect_url:
+        response.status_code = 303
+        response.headers["Location"] = data.redirect_url
     response.set_cookie("token", token)
-
     return response
 
 

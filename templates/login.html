@@ -57,7 +57,8 @@
                 <div class="card-body text-center">
                     <i class="fas fa-user-circle person-icon"></i>
                     <h2 class="card-title">Sign In</h2>
-                    <form action="" method="post">
+                    <form action="/login" method="post">
+                        <input type="hidden" name="redirect_url" value="{{ redirect_url }}">
                         <div class="form-group">
                             <input type="text" class="form-control" id="username" name="username" placeholder="Username">
                         </div>
