@@ -5,7 +5,7 @@ Calls itself to get the JWT public keys
 
 from typing import Annotated
 
-from fastapi import Cookie, Depends, HTTPException, status
+from fastapi import Cookie, Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from yumi import NotAuthorized, Scopes, UserInfo
 
@@ -17,6 +17,7 @@ def validate_jwt(
     auth: Annotated[
         HTTPAuthorizationCredentials | None, Depends(HTTPBearer(auto_error=False))
     ],
+    request: Request,
     token: Annotated[str | None, Cookie()] = None,
 ) -> UserInfo:
     """Validate the JWT token either passed in
@@ -30,7 +31,9 @@ def validate_jwt(
         )
     except NotAuthorized as exc:
         raise HTTPException(
-            303, "You are not authenticated", {"Location": "/login"}
+            303,
+            "You are not authenticated",
+            {"Location": "/login", "Set-Cookie": f"original_url={str(request.url)}"},
         ) from exc
 
 

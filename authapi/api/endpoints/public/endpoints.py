@@ -5,19 +5,18 @@ Public endpoints for authentication and authorization
 import base64
 from datetime import datetime, timedelta
 import hashlib
-import logging
 from uuid import UUID
 
 from fastapi.templating import Jinja2Templates
 import jwt
-from fastapi import Depends, HTTPException, Request, status
+from fastapi import Cookie, Depends, HTTPException, Header, Request, status
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.routing import APIRouter
 from sqlalchemy import exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from yumi import Scopes, UserInfo, Jwt
 
-from authapi.api.endpoints.oidc.endpoints import get_client
+from ..oidc.endpoints import get_client
 
 
 from ....database.models import (
@@ -89,6 +88,7 @@ async def get_login(request: Request):
 @router.post("/login")
 async def get_password_flow_token(
     data: UserLoginBody = Depends(UserLoginBody.as_form),
+    original_url: str = Cookie(None),
     session: AsyncSession = Depends(get_async_session),
 ):
     """
@@ -118,9 +118,13 @@ async def get_password_flow_token(
             status.HTTP_401_UNAUTHORIZED,
             "user does not have any of the requested scope",
         )
+
     token = build_user_token(data.username, allowed_scopes, data.alg)
-    response = RedirectResponse("/docs", 303)
+    response = JSONResponse({"token": token}, 200)
+    if original_url:
+        response = RedirectResponse(original_url, 303)
     response.set_cookie("token", token)
+
     return response
 
 
