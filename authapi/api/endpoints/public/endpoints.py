@@ -54,7 +54,7 @@ async def get_jwks():
 
 
 def build_user_token(
-    username: str,
+    email: str,
     scopes: list[str] | None = None,
     alg: Alg = Alg.EC,
     audience: str = "local",
@@ -62,7 +62,7 @@ def build_user_token(
     """Function to creates a user token based on the passed in information"""
     now = datetime.now()
     payload = Jwt(
-        sub=username,
+        sub=email,
         exp=(now + timedelta(hours=1)).timestamp(),
         aud=audience,
         iss=get_settings().jwt_config.jwks_server_url,
@@ -127,7 +127,7 @@ async def get_password_flow_token(
             status.HTTP_401_UNAUTHORIZED,
             "user does not have any of the requested scope",
         )
-    token = build_user_token(user_id, allowed_scopes, data.alg)
+    token = build_user_token(data.email, allowed_scopes, data.alg)
     response = JSONResponse({"token": token}, 200)
     if data.redirect_url:
         response.status_code = 303

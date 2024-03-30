@@ -10,7 +10,7 @@ import secrets
 from urllib.parse import parse_qs, urlparse
 
 import requests
-from yumi import Scopes
+
 
 from authapi.api.endpoints.oidc.schemas import (
     GrantTypes,
@@ -22,43 +22,51 @@ from .conftest import server  # pylint: disable=unused-import
 from .helpers import create_client, get_token
 
 
+ADMIN_EMAIL = "admin@email.com"
+
+
 def test_get_token(server):  # pylint: disable=redefined-outer-name
     """
     test getting a user token
+    TODO: Add a test trying to get scopes you shouldn't have
     """
-    username = "admin"
     scopes = ["admin", "read", "write"]
-    token = get_token(server, username, scopes)
+    token = get_token(server, ADMIN_EMAIL, scopes)
     fields = token.split(".")
     assert len(fields) == 3
     token_info = json.loads(b64decode(fields[1] + "==").decode())
-    assert token_info["sub"] == username
+    assert token_info["sub"] == ADMIN_EMAIL
     assert token_info["aud"] == "local"
     assert token_info["iss"] == get_settings().jwt_config.jwks_server_url
-    assert token_info["scopes"] == ["admin"]  ## hasn't been given read and write
+    assert token_info["scopes"] == ["admin", "read", "write"]
 
 
 def make_test_client(server):  # pylint: disable=redefined-outer-name
     """create a predefined test client"""
     name = "client1"
-    scopes = [Scopes.READ.value, Scopes.WRITE.value, Scopes.OPENID.value]
+
     grant_types = [GrantTypes.AUTHORIZATION_CODE, GrantTypes.IMPLICIT]
     redirect_uris = [server]
 
     return create_client(
-        server, "admin", ["admin"], name, scopes, redirect_uris, grant_types
+        server,
+        ADMIN_EMAIL,
+        ["admin"],
+        name,
+        ["admin"],
+        redirect_uris,
+        grant_types,
     )
 
 
 def test_get_client_token(server):  # pylint: disable=redefined-outer-name
     """test getting a client token"""
-    scopes = [Scopes.READ.value, Scopes.WRITE.value, Scopes.OPENID.value]
     data = make_test_client(server)
     client_id = data.get("client_id")
     client_secret = data.get("client_secret")
     assert client_id is not None
     assert client_secret is not None
-    assert data.get("scopes") == scopes
+    assert data.get("roles") == ["admin"]
     assert data.get("type") == "confidential"
     resp = requests.post(
         f"{server}/token",
@@ -89,7 +97,7 @@ def test_authorization_token_flow(
     4. client token returned
     """
     data = make_test_client(server)
-    token = get_token(server, "admin", ["admin"])
+    token = get_token(server, ADMIN_EMAIL, ["admin"])
     client_id = data.get("client_id")
     resp = requests.get(
         f"{server}/oauth2/authorize",
@@ -121,7 +129,7 @@ def test_authorization_id_token_flow(server):  # pylint: disable=redefined-outer
     4. id token with information about user returned
     """
     data = make_test_client(server)
-    token = get_token(server, "admin", ["admin"])
+    token = get_token(server, ADMIN_EMAIL, ["admin"])
 
     client_id = data.get("client_id")
     resp = requests.get(
@@ -137,6 +145,7 @@ def test_authorization_id_token_flow(server):  # pylint: disable=redefined-outer
         timeout=1,
         allow_redirects=False,
     )
+    print(resp.text)
     data = resp.headers["Location"]
     assert "id_token=" in data
     assert "state=extradata" in data
@@ -155,7 +164,7 @@ def test_authorization_code_flow_openid_plain_code_chal_method(
     4. send token request with authorization code and openid scope to get client token and id token
     """
     data = make_test_client(server)
-    token = get_token(server, "admin", ["admin"])
+    token = get_token(server, ADMIN_EMAIL, ["admin"])
 
     client_id = data.get("client_id")
     client_secret = data.get("client_secret")
@@ -200,7 +209,7 @@ def test_authorization_code_flow_openid_plain_code_chal_method(
         timeout=1,
     )
     data = resp.json()
-    scopes = ["openid", "read"]
+    scopes = ["read", "openid"]
     token = data.get("access_token")
     assert data.get("id_token") is not None
     assert token is not None
@@ -215,7 +224,7 @@ def test_authorization_code_flow_openid_plain_code_chal_method(
         "type": "confidential",
         "name": "client1",
         "description": "a test client",
-        "scopes": ["read", "write", "openid"],
+        "scopes": ["admin", "read", "write", "openid", "email", "profile"],
         "redirect_uris": ["http://0.0.0.0:8000"],
         "grant_types": ["authorization_code", "implicit"],
     }
@@ -233,7 +242,7 @@ def test_authorization_code_flow_no_openid_s265_chal_method(
     4. send token request with authorization code to get client token
     """
     data = make_test_client(server)
-    token = get_token(server, "admin", ["admin"])
+    token = get_token(server, ADMIN_EMAIL, ["admin"])
 
     code_verifier = secrets.token_urlsafe(50)
     code_challenge = (

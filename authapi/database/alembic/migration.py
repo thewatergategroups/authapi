@@ -12,6 +12,7 @@ from authapi.database.models import (
     UserModel,
     UserRoleMapModel,
 )
+from yumi import Scopes
 from authapi.schemas import Alg
 from authapi.settings import get_settings
 from sqlalchemy.dialects.postgresql import insert
@@ -25,16 +26,7 @@ def initial_setup(session: Session):
     for alg in Alg:
         alg.insert_cert(session, alg.generate_private_key())
     session.execute(
-        insert(ScopesModel).values(
-            [
-                dict(id_="admin"),
-                dict(id_="read"),
-                dict(id_="write"),
-                dict(id_="open_id"),
-                dict(id_="email"),
-                dict(id_="profile"),
-            ]
-        )
+        insert(ScopesModel).values([dict(id_=scope.value) for scope in Scopes])
     )
     admin_user_id = uuid4()
     pwd_hash = blake2b_hash(get_settings().admin_password)
@@ -55,21 +47,21 @@ def initial_setup(session: Session):
     session.execute(
         insert(RoleScopeMapModel).values(
             [
-                dict(scope_id="admin", user_id="admin"),
-                dict(scope_id="read", user_id="admin"),
-                dict(scope_id="write", user_id="admin"),
-                dict(scope_id="open_id", user_id="admin"),
-                dict(scope_id="email", user_id="admin"),
-                dict(scope_id="profile", user_id="admin"),
-                dict(scope_id="read", user_id="standard"),
-                dict(scope_id="write", user_id="standard"),
-                dict(scope_id="open_id", user_id="standard"),
-                dict(scope_id="email", user_id="standard"),
-                dict(scope_id="profile", user_id="standard"),
-                dict(scope_id="read", user_id="readonly"),
-                dict(scope_id="open_id", user_id="readonly"),
-                dict(scope_id="email", user_id="readonly"),
-                dict(scope_id="profile", user_id="readonly"),
+                dict(scope_id=Scopes.ADMIN.value, role_id="admin"),
+                dict(scope_id=Scopes.READ.value, role_id="admin"),
+                dict(scope_id=Scopes.WRITE.value, role_id="admin"),
+                dict(scope_id=Scopes.OPENID.value, role_id="admin"),
+                dict(scope_id=Scopes.EMAIL.value, role_id="admin"),
+                dict(scope_id=Scopes.PROFILE.value, role_id="admin"),
+                dict(scope_id=Scopes.READ.value, role_id="standard"),
+                dict(scope_id=Scopes.WRITE.value, role_id="standard"),
+                dict(scope_id=Scopes.OPENID.value, role_id="standard"),
+                dict(scope_id=Scopes.EMAIL.value, role_id="standard"),
+                dict(scope_id=Scopes.PROFILE.value, role_id="standard"),
+                dict(scope_id=Scopes.READ.value, role_id="readonly"),
+                dict(scope_id=Scopes.OPENID.value, role_id="readonly"),
+                dict(scope_id=Scopes.EMAIL.value, role_id="readonly"),
+                dict(scope_id=Scopes.PROFILE.value, role_id="readonly"),
             ]
         )
     )

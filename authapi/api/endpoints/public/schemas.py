@@ -13,9 +13,9 @@ class UserLoginBody(BaseModel):
 
     email: str
     password: str
-    scope: str | None
+    scope: str | None = None
     alg: Alg = Alg.EC
-    redirect_url: str | None
+    redirect_url: str | None = None
 
     @classmethod
     def as_form(

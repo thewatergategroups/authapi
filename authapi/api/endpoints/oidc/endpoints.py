@@ -17,6 +17,7 @@ from ....database.models import (
     ClientModel,
     ClientRedirectsModel,
     ClientRoleMapModel,
+    RoleScopeMapModel,
 )
 from ....deps import get_async_session
 from ...tools import blake2b_hash, generate_random_password
@@ -119,8 +120,12 @@ async def get_client_scopes(
     """get client scopes"""
     scopes = (
         await session.scalars(
-            select(ClientRoleMapModel.role_id).where(
-                ClientRoleMapModel.client_id == client_id
+            select(RoleScopeMapModel.scope_id).where(
+                RoleScopeMapModel.role_id.in_(
+                    select(ClientRoleMapModel.role_id).where(
+                        ClientRoleMapModel.client_id == client_id
+                    )
+                ),
             )
         )
     ).all()
