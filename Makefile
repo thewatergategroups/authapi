@@ -53,3 +53,6 @@ test:
 	sleep 0.3
 	pytest -vv tests || :
 	docker kill test-db
+
+migrate:
+	docker compose run --entrypoint "python -m alembic -c $(REPOSITORY)/database/alembic.ini revision --autogenerate -m '$(m)'" $(REPOSITORY)

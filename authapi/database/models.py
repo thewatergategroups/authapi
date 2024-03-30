@@ -2,6 +2,7 @@
 Postgres Database table definitions
 """
 
+from datetime import datetime
 from uuid import UUID
 
 from sqlalchemy import ForeignKey
@@ -19,12 +20,44 @@ class CertModel(BaseSql):
 
 
 class UserModel(BaseSql):
-    """table definition for storing user data"""
+    """
+    table definition for storing user data
+    Username is email
+    """
 
     __tablename__ = "users"
     __table_args__ = {"schema": "auth"}
-    username: Mapped[str] = mapped_column(primary_key=True)
+    id_: Mapped[UUID] = mapped_column(primary_key=True)
+    email: Mapped[str] = mapped_column(unique=True)
     pwd_hash: Mapped[str]
+    first_name: Mapped[str]
+    surname: Mapped[str]
+    dob: Mapped[datetime]
+    postcode: Mapped[str]
+
+
+class RoleModel(BaseSql):
+    """
+    User Roles too simplify adding permissions
+    """
+
+    __tablename__ = "roles"
+    __table_args__ = {"schema": "auth"}
+
+    id_: Mapped[str] = mapped_column(primary_key=True)
+
+
+class UserRoleMapModel(BaseSql):
+    """
+    table definition that maps users to their assigned roles
+    """
+
+    __tablename__ = "user_roles"
+    __table_args__ = {"schema": "auth"}
+    user_id: Mapped[UUID] = mapped_column(
+        ForeignKey("auth.users.id_"), primary_key=True
+    )
+    role_id: Mapped[str] = mapped_column(ForeignKey("auth.roles.id_"), primary_key=True)
 
 
 class ScopesModel(BaseSql):
@@ -35,17 +68,15 @@ class ScopesModel(BaseSql):
     id_: Mapped[str] = mapped_column(primary_key=True)
 
 
-class UserScopeModel(BaseSql):
+class RoleScopeMapModel(BaseSql):
     """table definition for storing what scopes users have"""
 
-    __tablename__ = "user_scopes"
+    __tablename__ = "role_scopes"
     __table_args__ = {"schema": "auth"}
     scope_id: Mapped[str] = mapped_column(
         ForeignKey("auth.scopes.id_"), primary_key=True
     )
-    user_id: Mapped[str] = mapped_column(
-        ForeignKey("auth.users.username"), primary_key=True
-    )
+    role_id: Mapped[str] = mapped_column(ForeignKey("auth.roles.id_"), primary_key=True)
 
 
 class ClientModel(BaseSql):
@@ -60,7 +91,7 @@ class ClientModel(BaseSql):
     description: Mapped[str]
 
 
-class ClientGrantMap(BaseSql):
+class ClientGrantMapModel(BaseSql):
     """table definition that maps clients to their allowed grant types"""
 
     __tablename__ = "client_grants"
@@ -71,18 +102,18 @@ class ClientGrantMap(BaseSql):
     grant_type: Mapped[str] = mapped_column(primary_key=True)
 
 
-class ClientScopeMap(BaseSql):
+class ClientRoleMapModel(BaseSql):
     """table definition that maps clients to their allowed scopes"""
 
-    __tablename__ = "client_scopes"
+    __tablename__ = "client_roles"
     __table_args__ = {"schema": "auth"}
     client_id: Mapped[UUID] = mapped_column(
         ForeignKey("auth.clients.id_"), primary_key=True
     )
-    scope: Mapped[str] = mapped_column(ForeignKey("auth.scopes.id_"), primary_key=True)
+    role_id: Mapped[str] = mapped_column(ForeignKey("auth.roles.id_"), primary_key=True)
 
 
-class ClientRedirects(BaseSql):
+class ClientRedirectsModel(BaseSql):
     """table definition that maps clients to their allowed redirect_urls"""
 
     __tablename__ = "client_redirect_uris"

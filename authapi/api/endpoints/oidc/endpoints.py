@@ -8,14 +8,15 @@ from uuid import UUID, uuid4
 from fastapi import Depends, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.routing import APIRouter
-from sqlalchemy import exists, insert, select, delete
+from sqlalchemy import exists, select, delete
+from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from ....database.models import (
-    ClientGrantMap,
+    ClientGrantMapModel,
     ClientModel,
-    ClientRedirects,
-    ClientScopeMap,
+    ClientRedirectsModel,
+    ClientRoleMapModel,
 )
 from ....deps import get_async_session
 from ...tools import blake2b_hash, generate_random_password
@@ -34,7 +35,7 @@ router = APIRouter(
 )
 
 
-@router.post("/create")
+@router.post("/add")
 async def create_client(
     data: ClientAddBody, session: AsyncSession = Depends(get_async_session)
 ):
@@ -58,17 +59,17 @@ async def create_client(
         )
     )
     await session.execute(
-        insert(ClientGrantMap).values(
+        insert(ClientGrantMapModel).values(
             [{"client_id": id_, "grant_type": gt.value} for gt in data.grant_types]
         )
     )
     await session.execute(
-        insert(ClientScopeMap).values(
-            [{"client_id": id_, "scope": scope} for scope in data.scopes]
+        insert(ClientRoleMapModel).values(
+            [{"client_id": id_, "role_id": role} for role in data.roles]
         )
     )
     await session.execute(
-        insert(ClientRedirects).values(
+        insert(ClientRedirectsModel).values(
             [
                 {"client_id": id_, "redirect_uri": redirect}
                 for redirect in data.redirect_uris
@@ -81,7 +82,7 @@ async def create_client(
             "client_secret": secret,
             "redirect_uris": data.redirect_uris,
             "grant_types": data.grant_types,
-            "scopes": data.scopes,
+            "roles": data.roles,
             "type": data.type,
         },
         201,
@@ -96,21 +97,21 @@ async def get_clients(session: AsyncSession = Depends(get_async_session)):
     return users
 
 
-@router.post("/scopes")
-async def add_client_scopes(
+@router.post("/roles")
+async def add_client_role(
     data: ClientScopesBody,
     session: AsyncSession = Depends(get_async_session),
 ):
     """add client scopes"""
     await session.execute(
-        insert(ClientScopeMap).values(
-            [{"client_id": data.client_id, "scope": scope} for scope in data.scopes]
-        )
+        insert(ClientRoleMapModel)
+        .values([{"client_id": data.client_id, "role_id": role} for role in data.roles])
+        .on_conflict_do_nothing()
     )
     return {"detail": "success"}
 
 
-@router.get("/scopes")
+@router.get("/roles")
 async def get_client_scopes(
     client_id: UUID,
     session: AsyncSession = Depends(get_async_session),
@@ -118,22 +119,24 @@ async def get_client_scopes(
     """get client scopes"""
     scopes = (
         await session.scalars(
-            select(ClientScopeMap.scope).where(ClientScopeMap.client_id == client_id)
+            select(ClientRoleMapModel.role_id).where(
+                ClientRoleMapModel.client_id == client_id
+            )
         )
     ).all()
     return scopes
 
 
-@router.delete("/scopes")
+@router.delete("/roles")
 async def delete_client_scopes(
     data: ClientScopesBody,
     session: AsyncSession = Depends(get_async_session),
 ):
     """delete client scopes"""
     await session.execute(
-        delete(ClientScopeMap).where(
-            ClientScopeMap.client_id == data.client_id,
-            ClientScopeMap.scope.in_(data.scopes),
+        delete(ClientRoleMapModel).where(
+            ClientRoleMapModel.client_id == data.client_id,
+            ClientRoleMapModel.role_id.in_(data.roles),
         )
     )
     return {"detail": "success"}
@@ -146,7 +149,7 @@ async def add_client_redirects(
 ):
     """add client redirects"""
     await session.execute(
-        insert(ClientRedirects).values(
+        insert(ClientRedirectsModel).values(
             [
                 {"client_id": data.client_id, "redirect_uri": redirect}
                 for redirect in data.redirect_uris
@@ -164,8 +167,8 @@ async def get_client_redirects(
     """get client redirects"""
     scopes = (
         await session.scalars(
-            select(ClientRedirects.redirect_uri).where(
-                ClientRedirects.client_id == client_id
+            select(ClientRedirectsModel.redirect_uri).where(
+                ClientRedirectsModel.client_id == client_id
             )
         )
     ).all()
@@ -179,9 +182,9 @@ async def delete_client_redirects(
 ):
     """delete client redirects"""
     await session.execute(
-        delete(ClientRedirects).where(
-            ClientRedirects.client_id == data.client_id,
-            ClientRedirects.redirect_uri.in_(data.redirect_uris),
+        delete(ClientRedirectsModel).where(
+            ClientRedirectsModel.client_id == data.client_id,
+            ClientRedirectsModel.redirect_uri.in_(data.redirect_uris),
         )
     )
     return {"detail": "success"}
@@ -194,7 +197,7 @@ async def add_client_grants(
 ):
     """add client grants"""
     await session.execute(
-        insert(ClientGrantMap).values(
+        insert(ClientGrantMapModel).values(
             [
                 {"client_id": data.client_id, "grant_type": grant}
                 for grant in data.grants
@@ -212,8 +215,8 @@ async def get_client_grants(
     """get client grants"""
     scopes = (
         await session.scalars(
-            select(ClientGrantMap.grant_type).where(
-                ClientGrantMap.client_id == client_id
+            select(ClientGrantMapModel.grant_type).where(
+                ClientGrantMapModel.client_id == client_id
             )
         )
     ).all()
@@ -227,9 +230,9 @@ async def delete_client_grants(
 ):
     """delete client grants"""
     await session.execute(
-        delete(ClientGrantMap).where(
-            ClientGrantMap.client_id == data.client_id,
-            ClientGrantMap.grant_type.in_(data.grants),
+        delete(ClientGrantMapModel).where(
+            ClientGrantMapModel.client_id == data.client_id,
+            ClientGrantMapModel.grant_type.in_(data.grants),
         )
     )
     return {"detail": "success"}

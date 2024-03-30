@@ -18,12 +18,13 @@ from authapi.api.endpoints.oidc.endpoints import get_client
 
 
 from ....database.models import (
-    ClientGrantMap,
+    ClientGrantMapModel,
     ClientModel,
-    ClientRedirects,
-    ClientScopeMap,
+    ClientRedirectsModel,
+    ClientRoleMapModel,
+    RoleScopeMapModel,
     UserModel,
-    UserScopeModel,
+    UserRoleMapModel,
 )
 from ....deps import get_async_session, get_templates
 from ....settings import get_settings
@@ -96,15 +97,24 @@ async def get_password_flow_token(
     passwd = blake2b_hash(data.password)
     us_exists = await session.scalar(
         select(exists(UserModel)).where(
-            UserModel.username == data.username, UserModel.pwd_hash == passwd
+            UserModel.email == data.email, UserModel.pwd_hash == passwd
         )
     )
     if not us_exists:
         raise HTTPException(401, "Unauthorized")
+
+    user_id = await session.scalar(
+        select(UserModel.id_).where(UserModel.email == data.email)
+    )
+
     scopes = (
         await session.scalars(
-            select(UserScopeModel.scope_id).where(
-                UserScopeModel.user_id == data.username
+            select(RoleScopeMapModel.scope_id).where(
+                RoleScopeMapModel.role_id.in_(
+                    select(UserRoleMapModel.role_id).where(
+                        UserRoleMapModel.user_id == user_id
+                    )
+                )
             )
         )
     ).all()
@@ -117,7 +127,7 @@ async def get_password_flow_token(
             status.HTTP_401_UNAUTHORIZED,
             "user does not have any of the requested scope",
         )
-    token = build_user_token(data.username, allowed_scopes, data.alg)
+    token = build_user_token(user_id, allowed_scopes, data.alg)
     response = JSONResponse({"token": token}, 200)
     if data.redirect_url:
         response.status_code = 303
@@ -146,9 +156,9 @@ async def authorize_oidc_request(
     scopes = scope.split(" ")
     grant_allowed = (
         await session.execute(
-            select(ClientGrantMap.grant_type).where(
-                ClientGrantMap.client_id == client_id,
-                ClientGrantMap.grant_type == GrantTypes.AUTHORIZATION_CODE.value,
+            select(ClientGrantMapModel.grant_type).where(
+                ClientGrantMapModel.client_id == client_id,
+                ClientGrantMapModel.grant_type == GrantTypes.AUTHORIZATION_CODE.value,
             )
         )
     ).scalar_one_or_none()
@@ -157,25 +167,25 @@ async def authorize_oidc_request(
         raise HTTPException(401, "grant type not allowed")
 
     allowed_scopes = (
-        (
-            await session.execute(
-                select(ClientScopeMap.scope).where(
-                    ClientScopeMap.scope.in_(scopes),
-                    ClientScopeMap.client_id == client_id,
-                )
-            )
+        await session.scalars(
+            select(RoleScopeMapModel.scope_id).where(
+                RoleScopeMapModel.role_id.in_(
+                    select(ClientRoleMapModel.role_id).where(
+                        ClientRoleMapModel.client_id == client_id
+                    )
+                ),
+                RoleScopeMapModel.scope_id.in_(scopes),
+            ),
         )
-        .scalars()
-        .all()
-    )
+    ).all()
     if not allowed_scopes:
         raise HTTPException(401, "Requested Scopes not allowed")
 
     uri_allowed = (
         await session.execute(
-            select(ClientRedirects.redirect_uri).where(
-                ClientRedirects.client_id == client_id,
-                ClientRedirects.redirect_uri == redirect_uri,
+            select(ClientRedirectsModel.redirect_uri).where(
+                ClientRedirectsModel.client_id == client_id,
+                ClientRedirectsModel.redirect_uri == redirect_uri,
             )
         )
     ).scalar_one_or_none()
@@ -270,9 +280,9 @@ async def implicit_flow(data: OidcTokenBody, session: AsyncSession):
 
     grant_allowed = (
         await session.execute(
-            select(ClientGrantMap.grant_type).where(
-                ClientGrantMap.client_id == data.client_id,
-                ClientGrantMap.grant_type == GrantTypes.IMPLICIT.value,
+            select(ClientGrantMapModel.grant_type).where(
+                ClientGrantMapModel.client_id == data.client_id,
+                ClientGrantMapModel.grant_type == GrantTypes.IMPLICIT.value,
             )
         )
     ).scalar_one_or_none()
@@ -280,18 +290,19 @@ async def implicit_flow(data: OidcTokenBody, session: AsyncSession):
     if not grant_allowed:
         raise HTTPException(401, "grant type not allowed")
     scopes = data.scope.split(" ")
+
     return (
-        (
-            await session.execute(
-                select(ClientScopeMap.scope).where(
-                    ClientScopeMap.scope.in_(scopes),
-                    ClientScopeMap.client_id == data.client_id,
-                )
+        await session.scalars(
+            select(RoleScopeMapModel.scope_id).where(
+                RoleScopeMapModel.role_id.in_(
+                    select(ClientRoleMapModel.role_id).where(
+                        ClientRoleMapModel.client_id == data.client_id
+                    )
+                ),
+                RoleScopeMapModel.scope_id.in_(scopes),
             )
         )
-        .scalars()
-        .all()
-    )
+    ).all()
 
 
 def build_client_token(

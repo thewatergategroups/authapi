@@ -20,7 +20,7 @@ router = APIRouter(
 )
 
 
-@router.post("/create")
+@router.post("/add")
 async def add_scope(
     data: ScopeBody, session: AsyncSession = Depends(get_async_session)
 ):

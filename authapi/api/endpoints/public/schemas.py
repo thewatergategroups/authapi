@@ -11,7 +11,7 @@ from ....schemas import Alg
 class UserLoginBody(BaseModel):
     """User login request body"""
 
-    username: str
+    email: str
     password: str
     scope: str | None
     alg: Alg = Alg.EC
@@ -20,7 +20,7 @@ class UserLoginBody(BaseModel):
     @classmethod
     def as_form(
         cls,
-        username: str = Form(...),
+        email: str = Form(...),
         password: str = Form(...),
         scope: str | None = Form(None),
         alg: Alg = Form(Alg.EC),
@@ -28,7 +28,7 @@ class UserLoginBody(BaseModel):
     ):
         """Allows use of this model as form data in an endpoint"""
         return cls(
-            username=username,
+            email=email,
             password=password,
             scope=scope,
             alg=alg,

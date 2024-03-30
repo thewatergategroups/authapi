@@ -48,7 +48,7 @@ class ClientAddBody(BaseModel):
     description: str
     redirect_uris: list[str]
     grant_types: list[GrantTypes]
-    scopes: list[str]
+    roles: list[str]
 
 
 class OidcTokenBody(BaseModel):
@@ -92,7 +92,7 @@ class ClientScopesBody(BaseModel):
     """Add client scopes body"""
 
     client_id: UUID
-    scopes: list[str]
+    roles: list[str]
 
 
 class ClientRedirectBody(BaseModel):
