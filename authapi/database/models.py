@@ -55,9 +55,11 @@ class UserRoleMapModel(BaseSql):
     __tablename__ = "user_roles"
     __table_args__ = {"schema": "auth"}
     user_id: Mapped[UUID] = mapped_column(
-        ForeignKey("auth.users.id_"), primary_key=True
+        ForeignKey("auth.users.id_", ondelete="CASCADE"), primary_key=True
     )
-    role_id: Mapped[str] = mapped_column(ForeignKey("auth.roles.id_"), primary_key=True)
+    role_id: Mapped[str] = mapped_column(
+        ForeignKey("auth.roles.id_", ondelete="CASCADE"), primary_key=True
+    )
 
 
 class ScopesModel(BaseSql):
@@ -74,9 +76,11 @@ class RoleScopeMapModel(BaseSql):
     __tablename__ = "role_scopes"
     __table_args__ = {"schema": "auth"}
     scope_id: Mapped[str] = mapped_column(
-        ForeignKey("auth.scopes.id_"), primary_key=True
+        ForeignKey("auth.scopes.id_", ondelete="CASCADE"), primary_key=True
     )
-    role_id: Mapped[str] = mapped_column(ForeignKey("auth.roles.id_"), primary_key=True)
+    role_id: Mapped[str] = mapped_column(
+        ForeignKey("auth.roles.id_", ondelete="CASCADE"), primary_key=True
+    )
 
 
 class ClientModel(BaseSql):
@@ -97,7 +101,8 @@ class ClientGrantMapModel(BaseSql):
     __tablename__ = "client_grants"
     __table_args__ = {"schema": "auth"}
     client_id: Mapped[UUID] = mapped_column(
-        ForeignKey("auth.clients.id_"), primary_key=True
+        ForeignKey("auth.clients.id_", ondelete="CASCADE"),
+        primary_key=True,
     )
     grant_type: Mapped[str] = mapped_column(primary_key=True)
 
@@ -108,9 +113,11 @@ class ClientRoleMapModel(BaseSql):
     __tablename__ = "client_roles"
     __table_args__ = {"schema": "auth"}
     client_id: Mapped[UUID] = mapped_column(
-        ForeignKey("auth.clients.id_"), primary_key=True
+        ForeignKey("auth.clients.id_", ondelete="CASCADE"), primary_key=True
     )
-    role_id: Mapped[str] = mapped_column(ForeignKey("auth.roles.id_"), primary_key=True)
+    role_id: Mapped[str] = mapped_column(
+        ForeignKey("auth.roles.id_", ondelete="CASCADE"), primary_key=True
+    )
 
 
 class ClientRedirectsModel(BaseSql):
@@ -119,6 +126,6 @@ class ClientRedirectsModel(BaseSql):
     __tablename__ = "client_redirect_uris"
     __table_args__ = {"schema": "auth"}
     client_id: Mapped[UUID] = mapped_column(
-        ForeignKey("auth.clients.id_"), primary_key=True
+        ForeignKey("auth.clients.id_", ondelete="CASCADE"), primary_key=True
     )
     redirect_uri: Mapped[str] = mapped_column(primary_key=True)

@@ -161,7 +161,6 @@ def test_authorization_id_token_flow(server):  # pylint: disable=redefined-outer
         timeout=1,
         allow_redirects=False,
     )
-    print(resp.text)
     data = resp.headers["Location"]
     assert "id_token=" in data
     assert "state=extradata" in data
