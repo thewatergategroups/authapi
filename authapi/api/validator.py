@@ -4,10 +4,10 @@ Calls itself to get the JWT public keys
 """
 
 from typing import Annotated
+from urllib.parse import quote
 
 from fastapi import Cookie, Depends, HTTPException, Request, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
-from urllib.parse import quote
 from yumi import NotAuthorized, Scopes, UserInfo
 
 from ..deps import get_jwt_client

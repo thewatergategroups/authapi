@@ -3,9 +3,6 @@ Database initalize function. Makes models avaliable at higher levels
 """
 
 from .models import (
-    ScopesModel,
-    UserModel,
-    UserRoleMapModel,
     CertModel,
     ClientGrantMapModel,
     ClientModel,
@@ -13,6 +10,9 @@ from .models import (
     ClientRoleMapModel,
     RoleModel,
     RoleScopeMapModel,
+    ScopesModel,
+    UserModel,
+    UserRoleMapModel,
 )
 
 __all__ = [

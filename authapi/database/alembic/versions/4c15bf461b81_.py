@@ -1,3 +1,4 @@
+# pylint: disable=all
 """
 
 Revision ID: 4c15bf461b81
@@ -10,8 +11,8 @@ from datetime import datetime, timezone
 from typing import Sequence, Union
 from uuid import uuid4
 
-from alembic import op
 import sqlalchemy as sa
+from alembic import op
 from sqlalchemy import orm
 
 from authapi.database.alembic.migration import initial_setup

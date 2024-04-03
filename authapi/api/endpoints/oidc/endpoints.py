@@ -8,7 +8,7 @@ from uuid import UUID, uuid4
 from fastapi import Depends, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.routing import APIRouter
-from sqlalchemy import exists, select, delete
+from sqlalchemy import delete, exists, select
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 

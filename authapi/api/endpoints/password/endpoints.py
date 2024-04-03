@@ -4,27 +4,29 @@ Requires admin permissions
 """
 
 from uuid import UUID, uuid4
+
 from fastapi import Depends, HTTPException
 from fastapi.routing import APIRouter
 from sqlalchemy import exists, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from yumi import UserInfo
+
 from ....database.models import (
-    UserModel,
-    RoleScopeMapModel,
     RoleModel,
+    RoleScopeMapModel,
+    UserModel,
     UserRoleMapModel,
 )
 from ....deps import get_async_session
 from ...tools import blake2b_hash
 from ...validator import has_admin_scope, validate_jwt
 from .schemas import (
-    RoleAddBody,
-    UserAddBody,
-    RoleScopesBody,
-    UserUpdateBody,
     AddUserRoleBody,
+    RoleAddBody,
+    RoleScopesBody,
+    UserAddBody,
+    UserUpdateBody,
 )
 
 router = APIRouter(

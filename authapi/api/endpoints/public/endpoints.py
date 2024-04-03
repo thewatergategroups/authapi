@@ -3,19 +3,19 @@ Public endpoints for authentication and authorization
 """
 
 import base64
-from datetime import datetime, timedelta
 import hashlib
+from datetime import datetime, timedelta
 from uuid import UUID
+
 import jwt
 from fastapi import Depends, HTTPException, Request, status
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.routing import APIRouter
 from sqlalchemy import exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from yumi import Scopes, UserInfo, Jwt
+from yumi import Jwt, Scopes, UserInfo
 
-from authapi.api.endpoints.oidc.endpoints import get_client
-
+from ..oidc.endpoints import get_client
 
 from ....database.models import (
     ClientGrantMapModel,
@@ -27,17 +27,17 @@ from ....database.models import (
     UserRoleMapModel,
 )
 from ....deps import get_async_session, get_templates
-from ....settings import get_settings
 from ....schemas import Alg
+from ....settings import get_settings
 from ...tools import blake2b_hash, generate_random_password
 from ...validator import has_admin_scope, has_openid_scope, validate_jwt
 from ..oidc.schemas import (
     AUTHORIZATION_CODES,
+    ClientType,
+    CodeChallengeMethods,
     GrantTypes,
     OidcTokenBody,
     ResponseTypes,
-    ClientType,
-    CodeChallengeMethods,
 )
 from .schemas import UserLoginBody
 

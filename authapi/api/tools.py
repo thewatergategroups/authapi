@@ -4,6 +4,7 @@ Helper function
 
 import hashlib
 import secrets
+
 from ..settings import get_settings
 
 

@@ -5,22 +5,21 @@ Endpoint tests
 import base64
 import hashlib
 import json
-from base64 import b64decode
 import secrets
+from base64 import b64decode
 from urllib.parse import parse_qs, urlparse
 
 import requests
 
-
 from authapi.api.endpoints.oidc.schemas import (
+    CodeChallengeMethods,
     GrantTypes,
     ResponseTypes,
-    CodeChallengeMethods,
 )
 from authapi.settings import get_settings
+
 from .conftest import server  # pylint: disable=unused-import
 from .helpers import create_client, get_token
-
 
 ADMIN_EMAIL = "admin@email.com"
 
