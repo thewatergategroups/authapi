@@ -26,6 +26,34 @@ def get_token(url: str, email: str, scopes: list[str]):
     return response.cookies.get("token")
 
 
+def delete_scope_from_role(
+    url: str, token_email: str, token_scopes: list[str], role_id: str, scope_id: str
+):
+    """delete scope from role"""
+    token = get_token(url, token_email, token_scopes)
+    response = requests.delete(
+        f"{url}/roles/scopes",
+        params=dict(role_id=role_id, scope_id=scope_id),
+        headers={"Authorization": f"Bearer {token}"},
+        timeout=1,
+    )
+    response.raise_for_status()
+
+
+def add_scope_to_role(
+    url: str, token_email: str, token_scopes: list[str], role_id: str, scope_id: str
+):
+    """add scope to role"""
+    token = get_token(url, token_email, token_scopes)
+    response = requests.post(
+        f"{url}/roles/scopes",
+        json=dict(role_id=role_id, scope_id=scope_id),
+        headers={"Authorization": f"Bearer {token}"},
+        timeout=1,
+    )
+    response.raise_for_status()
+
+
 def create_client(
     url: str,
     token_email: str,

@@ -7,7 +7,7 @@ from uuid import UUID, uuid4
 
 from fastapi import Depends, HTTPException
 from fastapi.routing import APIRouter
-from sqlalchemy import exists, select, update
+from sqlalchemy import delete, exists, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from yumi import UserInfo
@@ -170,7 +170,7 @@ async def add_role_scopes(
 ):
     """add role scopes"""
     await session.execute(
-        insert(RoleScopeMapModel).values(scope_id=data.scope, role_id=data.role_id)
+        insert(RoleScopeMapModel).values(scope_id=data.scope_id, role_id=data.role_id)
     )
     return {"detail": "success"}
 
@@ -189,3 +189,19 @@ async def get_role_scopes(
         )
     ).all()
     return scopes
+
+
+@router.delete("/roles/scopes")
+async def get_role_scope(
+    role_id: str,
+    scope_id: str,
+    session: AsyncSession = Depends(get_async_session),
+):
+    """get user scopes"""
+    await session.execute(
+        delete(RoleScopeMapModel).where(
+            RoleScopeMapModel.role_id == role_id,
+            RoleScopeMapModel.scope_id == scope_id,
+        )
+    )
+    return {"detail": "success"}

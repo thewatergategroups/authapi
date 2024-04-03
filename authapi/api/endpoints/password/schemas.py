@@ -13,7 +13,7 @@ class RoleScopesBody(BaseModel):
     """Add user scope request body"""
 
     role_id: str
-    scope: str
+    scope_id: str
 
 
 class RoleAddBody(BaseModel):

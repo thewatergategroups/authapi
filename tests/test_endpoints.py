@@ -19,7 +19,7 @@ from authapi.api.endpoints.oidc.schemas import (
 from authapi.settings import get_settings
 
 from .conftest import server  # pylint: disable=unused-import
-from .helpers import create_client, get_token
+from .helpers import add_scope_to_role, create_client, get_token, delete_scope_from_role
 
 ADMIN_EMAIL = "admin@email.com"
 
@@ -27,7 +27,6 @@ ADMIN_EMAIL = "admin@email.com"
 def test_get_token(server):  # pylint: disable=redefined-outer-name
     """
     test getting a user token
-    TODO: Add a test trying to get scopes you shouldn't have
     """
     scopes = ["admin", "read", "write"]
     token = get_token(server, ADMIN_EMAIL, scopes)
@@ -38,6 +37,24 @@ def test_get_token(server):  # pylint: disable=redefined-outer-name
     assert token_info["aud"] == "local"
     assert token_info["iss"] == get_settings().jwt_config.jwks_server_url
     assert token_info["scopes"] == ["admin", "read", "write"]
+
+
+def test_get_token_disallowed_scope(server):  # pylint: disable=redefined-outer-name
+    """
+    test getting a user token where one of the scopes is disallowed
+    """
+
+    delete_scope_from_role(server, ADMIN_EMAIL, ["admin"], "admin", "write")
+    scopes = ["admin", "read", "write"]
+    token = get_token(server, ADMIN_EMAIL, scopes)
+    fields = token.split(".")
+    assert len(fields) == 3
+    token_info = json.loads(b64decode(fields[1] + "==").decode())
+    assert token_info["sub"] == ADMIN_EMAIL
+    assert token_info["aud"] == "local"
+    assert token_info["iss"] == get_settings().jwt_config.jwks_server_url
+    assert token_info["scopes"] == ["admin", "read"]
+    add_scope_to_role(server, ADMIN_EMAIL, ["admin"], "admin", "write")
 
 
 def make_test_client(server):  # pylint: disable=redefined-outer-name
@@ -223,7 +240,7 @@ def test_authorization_code_flow_openid_plain_code_chal_method(
         "type": "confidential",
         "name": "client1",
         "description": "a test client",
-        "scopes": ["admin", "read", "write", "openid", "email", "profile"],
+        "scopes": ["admin", "email", "openid", "profile", "read", "write"],
         "redirect_uris": ["http://0.0.0.0:8000"],
         "grant_types": ["authorization_code", "implicit"],
     }

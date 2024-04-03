@@ -120,13 +120,15 @@ async def get_client_scopes(
     """get client scopes"""
     scopes = (
         await session.scalars(
-            select(RoleScopeMapModel.scope_id).where(
+            select(RoleScopeMapModel.scope_id)
+            .where(
                 RoleScopeMapModel.role_id.in_(
                     select(ClientRoleMapModel.role_id).where(
                         ClientRoleMapModel.client_id == client_id
                     )
                 ),
             )
+            .order_by(RoleScopeMapModel.scope_id)
         )
     ).all()
     return scopes
