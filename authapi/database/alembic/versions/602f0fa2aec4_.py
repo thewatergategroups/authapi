@@ -1,9 +1,9 @@
 # pylint: disable=all
 """
 
-Revision ID: b39f7c82f97c
+Revision ID: 602f0fa2aec4
 Revises: 4c15bf461b81
-Create Date: 2024-04-07 18:41:08.575192
+Create Date: 2024-04-07 19:18:00.179543
 
 """
 
@@ -14,7 +14,7 @@ import sqlalchemy as sa
 
 
 # revision identifiers, used by Alembic.
-revision: str = "b39f7c82f97c"
+revision: str = "602f0fa2aec4"
 down_revision: Union[str, None] = "4c15bf461b81"
 branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
@@ -29,17 +29,15 @@ def upgrade() -> None:
         sa.Column("scopes", sa.ARRAY(sa.String()), nullable=False),
         sa.Column("username", sa.String(), nullable=False),
         sa.Column("redirect_uri", sa.String(), nullable=False),
-        sa.Column("code_challenge", sa.String(), nullable=False),
-        sa.Column("code_challenge_method", sa.String(), nullable=False),
+        sa.Column("code_challenge", sa.String(), nullable=True),
+        sa.Column("code_challenge_method", sa.String(), nullable=True),
         sa.ForeignKeyConstraint(
             ["client_id"], ["auth.clients.id_"], ondelete="CASCADE"
         ),
         sa.PrimaryKeyConstraint("code"),
         schema="auth",
     )
-    # ### end Alembic commands ###
 
 
 def downgrade() -> None:
     op.drop_table("authorization_codes", schema="auth")
-    # ### end Alembic commands ###

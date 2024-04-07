@@ -200,7 +200,6 @@ def test_authorization_code_flow_openid_plain_code_chal_method(
         timeout=1,
         allow_redirects=False,
     )
-    print(resp.text)
     data = resp.headers["Location"]
     parsed_url = urlparse(data)
     assert "code=" in data
@@ -297,6 +296,61 @@ def test_authorization_code_flow_no_openid_s265_chal_method(
             "client_id": client_id,
             "client_secret": client_secret,
             "code_verifier": code_verifier,
+            "grant_type": GrantTypes.AUTHORIZATION_CODE.value,
+            "redirect_uri": server,
+            "scope": "read",
+        },
+        headers={"Content-Type": "application/x-www-form-urlencoded"},
+        timeout=1,
+    )
+    data = resp.json()
+    assert data.get("id_token") is None
+    assert data.get("access_token") is not None
+    assert data.get("scopes") == ["read"]
+
+
+def test_authorization_code_flow_no_openid_no_code_challenge(
+    server,
+):  # pylint: disable=redefined-outer-name
+    """
+    test authorization id token flow
+    Steps:
+    1. make client
+    2. authenticate user
+    3. send Authorize request to get a authorization code
+    4. send token request with authorization code to get client token
+    """
+    data = make_test_client(server)
+    token = get_token(server, ADMIN_EMAIL, ["admin"])
+
+    client_id = data.get("client_id")
+    client_secret = data.get("client_secret")
+    resp = requests.get(
+        f"{server}/oauth2/authorize",
+        params={
+            "response_type": ResponseTypes.CODE,
+            "client_id": client_id,
+            "redirect_uri": server,
+            "scope": "read",
+            "state": "extradata",
+        },
+        headers={"Authorization": f"Bearer {token}"},
+        timeout=1,
+        allow_redirects=False,
+    )
+    data = resp.headers["Location"]
+    parsed_url = urlparse(data)
+    assert "code=" in data
+    assert "state=extradata" in data
+    assert server in data
+    code = parse_qs(parsed_url.query)["code"][0]
+    assert code is not None
+    resp = requests.post(
+        f"{server}/token",
+        data={
+            "code": code,
+            "client_id": client_id,
+            "client_secret": client_secret,
             "grant_type": GrantTypes.AUTHORIZATION_CODE.value,
             "redirect_uri": server,
             "scope": "read",
