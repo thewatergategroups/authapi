@@ -25,6 +25,7 @@ from ....database.models import (
     RoleScopeMapModel,
     UserModel,
     UserRoleMapModel,
+    AuthorizationCodeModel,
 )
 from ....deps import get_async_session, get_templates
 from ....schemas import Alg
@@ -32,7 +33,6 @@ from ....settings import get_settings
 from ...tools import blake2b_hash, generate_random_password
 from ...validator import has_admin_scope, has_openid_scope, validate_jwt
 from ..oidc.schemas import (
-    AUTHORIZATION_CODES,
     ClientType,
     CodeChallengeMethods,
     GrantTypes,
@@ -209,16 +209,18 @@ async def authorize_oidc_request(
         return RedirectResponse(f"{redirect_uri}?id_token={token}&state={state}", 302)
 
     elif response_type == ResponseTypes.CODE:
-
         code = generate_random_password()
-        AUTHORIZATION_CODES[code] = {
-            "client_id": client_id,
-            "scopes": allowed_scopes,
-            "username": user_info.username,
-            "redirect_uri": redirect_uri,
-            "code_challenge": code_challenge,
-            "code_challenge_method": code_challenge_method,
-        }
+        code_model = AuthorizationCodeModel(
+            code=code,
+            client_id=client_id,
+            scopes=allowed_scopes,
+            username=user_info.username,
+            redirect_uri=redirect_uri,
+            code_challenge=code_challenge,
+            code_challenge_method=code_challenge_method,
+        )
+        await code_model.insert(session)
+
         return RedirectResponse(f"{redirect_uri}?code={code}&state={state}", 302)
 
     # elif response_type == ResponseTypes.ID_T_T:
@@ -239,24 +241,22 @@ async def authorize_oidc_request(
     # return
 
 
-def auth_code_flow_validation(data: OidcTokenBody):
+async def auth_code_flow_validation(data: OidcTokenBody, session: AsyncSession):
     """validate input parameters to auth code flow"""
-    code_data = AUTHORIZATION_CODES.pop(data.code, None)
+    code_data = await AuthorizationCodeModel.select(data.code, session)
+    await AuthorizationCodeModel.delete(data.code, session)
+
     if code_data is None and data.grant_type == GrantTypes.AUTHORIZATION_CODE:
         raise HTTPException(401, "Authorization code not found")
-    client_id = code_data["client_id"]
-    username = code_data["username"]
-    if client_id != data.client_id:
+    if code_data.client_id != data.client_id:
         raise HTTPException(401, "authorization code not related to this client")
-    if code_data["redirect_uri"] != data.redirect_uri:
+    if code_data.redirect_uri != data.redirect_uri:
         raise HTTPException(400, "redirect URI changed")
 
-    code_challenge_method = code_data["code_challenge_method"]
-    code_challenge = code_data["code_challenge"]
-    if code_challenge_method == CodeChallengeMethods.PLAIN:
-        if code_challenge != data.code_verifier:
+    if code_data.code_challenge_method == CodeChallengeMethods.PLAIN:
+        if code_data.code_challenge != data.code_verifier:
             raise HTTPException(401, "incorrect code challenge")
-    elif code_challenge_method == CodeChallengeMethods.S256:
+    elif code_data.code_challenge_method == CodeChallengeMethods.S256:
         hashed_code_verifier = (
             base64.urlsafe_b64encode(
                 hashlib.sha256(data.code_verifier.encode()).digest()
@@ -264,12 +264,15 @@ def auth_code_flow_validation(data: OidcTokenBody):
             .decode()
             .rstrip("=")
         )
-        if hashed_code_verifier != code_challenge:
+        if hashed_code_verifier != code_data.code_challenge:
             raise HTTPException(401, "Incorrect code challenge")
-    elif code_challenge is not None and code_challenge_method is not None:
+    elif (
+        code_data.code_challenge is not None
+        and code_data.code_challenge_method is not None
+    ):
         raise HTTPException(400, "Code challenge method not allowed")
 
-    return code_data["scopes"], username
+    return code_data.scopes, code_data.username
 
 
 async def implicit_flow(data: OidcTokenBody, session: AsyncSession):
@@ -358,7 +361,7 @@ async def get_token(
         raise HTTPException("incorrect client hash")
 
     if data.grant_type == GrantTypes.AUTHORIZATION_CODE:
-        scopes, username = auth_code_flow_validation(data)
+        scopes, username = await auth_code_flow_validation(data, session)
     elif data.grant_type == GrantTypes.IMPLICIT:
         scopes = await implicit_flow(data, session)
 

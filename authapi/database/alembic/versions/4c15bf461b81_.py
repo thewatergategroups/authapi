@@ -7,9 +7,7 @@ Create Date: 2024-03-30 10:55:36.917681
 
 """
 
-from datetime import datetime, timezone
 from typing import Sequence, Union
-from uuid import uuid4
 
 import sqlalchemy as sa
 from alembic import op

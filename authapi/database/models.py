@@ -4,8 +4,9 @@ Postgres Database table definitions
 
 from datetime import datetime
 from uuid import UUID
-
-from sqlalchemy import ForeignKey
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy.dialects.postgresql import insert
+from sqlalchemy import ForeignKey, ARRAY, delete, select, String
 from sqlalchemy.orm import Mapped, mapped_column
 from trekkers import BaseSql
 
@@ -129,3 +130,33 @@ class ClientRedirectsModel(BaseSql):
         ForeignKey("auth.clients.id_", ondelete="CASCADE"), primary_key=True
     )
     redirect_uri: Mapped[str] = mapped_column(primary_key=True)
+
+
+class AuthorizationCodeModel(BaseSql):
+    """Authorization code intermediary table"""
+
+    __tablename__ = "authorization_codes"
+    __table_args__ = {"schema": "auth"}
+    code: Mapped[str] = mapped_column(primary_key=True)
+    client_id: Mapped[UUID] = mapped_column(
+        ForeignKey("auth.clients.id_", ondelete="CASCADE")
+    )
+    scopes: Mapped[list] = mapped_column(type_=ARRAY(String))
+    username: Mapped[str]
+    redirect_uri: Mapped[str]
+    code_challenge: Mapped[str]
+    code_challenge_method: Mapped[str]
+
+    async def insert(self, session: AsyncSession):
+        """Insert into the database"""
+        await session.execute(insert(type(self)).values(self.as_dict()))
+
+    @classmethod
+    async def delete(cls, code: str, session: AsyncSession):
+        """delete from the database"""
+        await session.execute(delete(cls).where(cls.code == code))
+
+    @classmethod
+    async def select(cls, code: str, session: AsyncSession):
+        """select from the database"""
+        return await session.scalar(select(cls).where(cls.code == code))

@@ -10,8 +10,6 @@ from pydantic import BaseModel
 
 from ....schemas import Alg
 
-AUTHORIZATION_CODES = {}
-
 
 class ClientType(StrEnum):
     """Allowed Client types"""
