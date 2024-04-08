@@ -182,19 +182,61 @@ class AuthorizationCodeModel(BaseSql):
         return await session.scalar(select(cls).where(cls.code == code))
 
 
-# class SessionManagementModel(BaseSql):
-#     """Keep track of issued tokens and their status"""
+class SessionModel(BaseSql):
+    """Keep track of issued tokens and their status"""
 
-#     __tablename__ = "sessions"
-#     __table_args__ = {"schema": "auth"}
+    __tablename__ = "sessions"
+    __table_args__ = {"schema": "auth"}
 
-#     session_id: Mapped[str] = mapped_column(primary_key=True)
-#     user_id: Mapped[str] = mapped_column(
-#         ForeignKey("auth.users.id_", ondelete="CASCADE"), primary_key=True
-#     )
-#     expiration_time: Mapped[datetime]
-#     creation_time: Mapped[datetime]
-#     last_active_time: Mapped[datetime]
+    id_: Mapped[str] = mapped_column(primary_key=True)
+    user_id: Mapped[str] = mapped_column(
+        ForeignKey("auth.users.id_", ondelete="CASCADE"), primary_key=True
+    )
+    ip_address: Mapped[str]
+    user_agent: Mapped[str]
+    scopes: Mapped[list] = mapped_column(type_=ARRAY(String))
+    expires_at: Mapped[datetime]
+    created_at: Mapped[datetime] = mapped_column(
+        server_default=func.now()  # pylint: disable=not-callable
+    )
+    last_active_time: Mapped[datetime] = mapped_column(
+        server_default=func.now()  # pylint: disable=not-callable
+    )
+
+    @classmethod
+    async def insert(
+        cls,
+        user_id: str,
+        ip_address: str,
+        user_agent: str,
+        scopes: list[str],
+        session: AsyncSession,
+        expires_at: datetime = (datetime.now(timezone.utc) + timedelta(days=1)),
+    ):
+        """Insert into the database"""
+        id_ = generate_random_password()
+
+        await session.execute(
+            insert(cls).values(
+                id_=blake2b_hash(id_),
+                user_id=user_id,
+                ip_address=ip_address,
+                scopes=scopes,
+                user_agent=user_agent,
+                expires_at=expires_at,
+            )
+        )
+        return id_, expires_at
+
+    @classmethod
+    async def delete(cls, id_: str, session: AsyncSession):
+        """delete from the database"""
+        await session.execute(delete(cls).where(cls.id_ == blake2b_hash(id_)))
+
+    @classmethod
+    async def select(cls, id_: str, session: AsyncSession):
+        """select from the database"""
+        return await session.scalar(select(cls).where(cls.id_ == blake2b_hash(id_)))
 
 
 class RefreshTokenModel(BaseSql):

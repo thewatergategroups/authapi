@@ -10,13 +10,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from ....database.models import ScopesModel
 from ....deps import get_async_session
-from ...validator import has_admin_scope
+from ...validator import session_has_admin_scope
 from .schemas import ScopeBody
 
 router = APIRouter(
     prefix="/scopes",
     tags=["scopes"],
-    dependencies=[Depends(has_admin_scope())],
+    dependencies=[Depends(session_has_admin_scope())],
 )
 
 

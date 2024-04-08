@@ -50,8 +50,8 @@ template:
 
 test: 
 	docker run --rm -p 5431:5432 --name test-db --env POSTGRES_USER=postgres --env POSTGRES_DB=postgres --env POSTGRES_PASSWORD=postgres -d postgres:16
-	sleep 0.3
-	pytest -vv tests/test_endpoints.py || :
+	sleep 0.2
+	pytest -vv tests || :
 	docker kill test-db
 
 migrate:

@@ -2,16 +2,15 @@
 Test configuration
 """
 
-from datetime import datetime, timezone
 import time
 from multiprocessing import Process
 
-from freezegun import freeze_time
 import pytest
 import uvicorn
 from trekkers import database
 
 from authapi.api.app import create_app
+from authapi.deps import get_sync_sessionm
 from authapi.settings import Settings, get_settings
 
 
@@ -21,6 +20,15 @@ def setup():
     settings = get_settings()
     setenv(settings)
     database(settings.db_settings, "upgrade", "head")
+
+
+@pytest.fixture
+def session():
+    """
+    Return sync postgres session
+    """
+    with get_sync_sessionm().begin() as sess:  # pylint: disable=no-member
+        yield sess
 
 
 def setenv(settings: Settings):

@@ -18,7 +18,7 @@ freezegun = "^1.4.0"
 
 
 [tool.poetry.group.local.dependencies]
-yumi = { version = "^0.2", source = "kube" }
+yumi = { version = "^0.3", source = "kube" }
 trekkers = { version = "^0.2", source = "kube" }
 
 [tool.poetry.group.dev.dependencies]

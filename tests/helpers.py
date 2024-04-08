@@ -23,32 +23,37 @@ def get_token(url: str, email: str, scopes: list[str]):
         timeout=1,
         allow_redirects=False,
     )
-    return response.cookies.get("token")
+    return response.cookies.get("id_token"), response.cookies.get("session_id")
 
 
 def delete_scope_from_role(
     url: str, token_email: str, token_scopes: list[str], role_id: str, scope_id: str
 ):
     """delete scope from role"""
-    token = get_token(url, token_email, token_scopes)
+    _, session_id = get_token(url, token_email, token_scopes)
     response = requests.delete(
         f"{url}/roles/scopes",
         params=dict(role_id=role_id, scope_id=scope_id),
-        headers={"Authorization": f"Bearer {token}"},
+        cookies={"session_id": session_id},
         timeout=1,
     )
+    print(response.json())
     response.raise_for_status()
 
 
 def add_scope_to_role(
-    url: str, token_email: str, token_scopes: list[str], role_id: str, scope_id: str
+    url: str,
+    token_email: str,
+    token_scopes: list[str],
+    role_id: str,
+    scope_id: str,
 ):
     """add scope to role"""
-    token = get_token(url, token_email, token_scopes)
+    _, session_id = get_token(url, token_email, token_scopes)
     response = requests.post(
         f"{url}/roles/scopes",
         json=dict(role_id=role_id, scope_id=scope_id),
-        headers={"Authorization": f"Bearer {token}"},
+        cookies={"session_id": session_id},
         timeout=1,
     )
     response.raise_for_status()
@@ -65,7 +70,7 @@ def create_client(
     client_type: ClientType = ClientType.CONFIDENTIAL,
 ):
     """Create a Client Application"""
-    token = get_token(url, token_email, token_scopes)
+    _, session_id = get_token(url, token_email, token_scopes)
 
     response = requests.post(
         f"{url}/clients/add",
@@ -77,7 +82,7 @@ def create_client(
             roles=client_roles,
             type=client_type,
         ).model_dump(),
-        headers={"Authorization": f"Bearer {token}"},
+        cookies={"session_id": session_id},
         timeout=1,
     )
     return response.json()

@@ -5,17 +5,17 @@ Public endpoints for authentication and authorization
 import base64
 import hashlib
 from datetime import datetime, timedelta, timezone
+from typing import Annotated
 from uuid import UUID
 
 import jwt
-from fastapi import Depends, HTTPException, Request, status
+from fastapi import Depends, HTTPException, Header, Request, status
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.routing import APIRouter
 from sqlalchemy import exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
 from yumi import Jwt, Scopes, UserInfo
 
-from ..oidc.endpoints import get_client
 
 from ....database.models import (
     ClientGrantMapModel,
@@ -27,12 +27,13 @@ from ....database.models import (
     UserRoleMapModel,
     AuthorizationCodeModel,
     RefreshTokenModel,
+    SessionModel,
 )
 from ....deps import get_async_session, get_templates
 from ....schemas import Alg
 from ....settings import get_settings
 from ...tools import blake2b_hash, generate_random_password
-from ...validator import has_admin_scope, has_openid_scope, validate_jwt
+from ...validator import session_has_admin_scope, validate_client_token
 from ..oidc.schemas import (
     ClientType,
     CodeChallengeMethods,
@@ -90,7 +91,9 @@ async def get_login(request: Request, redirect_url: str = None):
 
 @router.post("/login")
 async def get_password_flow_token(
+    request: Request,
     data: UserLoginBody = Depends(UserLoginBody.as_form),
+    user_agent: Annotated[str | None, Header()] = None,
     session: AsyncSession = Depends(get_async_session),
 ):
     """
@@ -105,9 +108,7 @@ async def get_password_flow_token(
     if not us_exists:
         raise HTTPException(401, "Unauthorized")
 
-    user_id = await session.scalar(
-        select(UserModel.id_).where(UserModel.email == data.email)
-    )
+    user_id = await UserModel.select_id_from_email(data.email, session)
 
     scopes = (
         await session.scalars(
@@ -129,12 +130,25 @@ async def get_password_flow_token(
             status.HTTP_401_UNAUTHORIZED,
             "user does not have any of the requested scope",
         )
-    token = build_user_token(data.email, allowed_scopes, data.alg)
-    response = JSONResponse({"token": token}, 200)
+    if user_agent is None:
+        raise HTTPException(
+            status.HTTP_401_UNAUTHORIZED,
+            "user agent must be present",
+        )
+    session_id, expires_at = await SessionModel.insert(
+        user_id, request.client.host, user_agent, allowed_scopes, session
+    )
+    id_token = build_user_token(data.email, alg=data.alg)
+    response = JSONResponse({"id_token": id_token}, 200)
+    response.set_cookie(
+        "session_id", session_id, expires=expires_at, secure=True, httponly=True
+    )
     if data.redirect_url:
         response.status_code = 303
         response.headers["Location"] = data.redirect_url
-    response.set_cookie("token", token)
+    response.set_cookie(
+        "id_token", id_token, expires=expires_at, secure=True, httponly=True
+    )
     return response
 
 
@@ -149,7 +163,7 @@ async def authorize_oidc_request(
     code_challenge_method: CodeChallengeMethods | None = None,
     alg: Alg = Alg.EC,
     session: AsyncSession = Depends(get_async_session),
-    user_info: UserInfo = Depends(has_admin_scope()),
+    user_info: UserInfo = Depends(session_has_admin_scope()),
 ):
     """
     Authorization endpoint for OIDC and oAuth flows.
@@ -196,7 +210,7 @@ async def authorize_oidc_request(
 
     if response_type == ResponseTypes.TOKEN:
         token, _ = build_client_token(
-            str(client_id), allowed_scopes, alg, user_info.username
+            str(client_id), allowed_scopes, alg, user_info.sub
         )
         return RedirectResponse(
             f"{redirect_uri}?access_token={token}&token_type=Bearer&state={state}", 302
@@ -207,11 +221,11 @@ async def authorize_oidc_request(
             raise HTTPException(
                 "openid scope required to be present to get an id token"
             )
-        token = build_user_token(user_info.username, alg=alg)
+        token = build_user_token(user_info.sub, alg=alg)
         return RedirectResponse(f"{redirect_uri}?id_token={token}&state={state}", 302)
 
     elif response_type == ResponseTypes.CODE:
-        user_id = await UserModel.select_id_from_email(user_info.username, session)
+        user_id = await UserModel.select_id_from_email(user_info.sub, session)
         if user_id is None:
             raise HTTPException(401, "user not found")
 
@@ -390,6 +404,7 @@ async def get_token(
 
     response = dict()
     user_id = None
+    email = None
     if blake2b_hash(data.client_secret) != client_secret_hash:
         raise HTTPException("incorrect client hash")
     if data.grant_type == GrantTypes.AUTHORIZATION_CODE:
@@ -402,7 +417,9 @@ async def get_token(
 
     elif data.grant_type == GrantTypes.REFRESH_TOKEN:
         scopes, user_id = await refresh_token_flow(data, session)
-    token, expires_in = build_client_token(str(data.client_id), scopes, data.alg)
+    if user_id is not None:
+        email = await UserModel.select_email_from_id(user_id, session)
+    token, expires_in = build_client_token(str(data.client_id), scopes, data.alg, email)
 
     response.update(
         access_token=token,
@@ -411,8 +428,7 @@ async def get_token(
         expires_in=expires_in,
     )
 
-    if Scopes.OPENID in scopes and user_id is not None:
-        email = await UserModel.select_email_from_id(user_id, session)
+    if Scopes.OPENID in scopes and email is not None:
         user_token = build_user_token(email, audience=str(data.client_id))
         response["id_token"] = user_token
 
@@ -446,11 +462,32 @@ async def get_well_known_open_id():
 @router.get("/userinfo")
 async def get_userinfo(
     session: AsyncSession = Depends(get_async_session),
-    user_info: UserInfo = Depends(validate_jwt),
-    _=Depends(has_openid_scope),
+    user_info: UserInfo = Depends(validate_client_token),
 ):
-    """Return client identity"""
-    return await get_client(UUID(user_info.username), session)
+    """Return user identity from client"""
+
+    user = await session.scalar(
+        select(UserModel).where(UserModel.email == user_info.du)
+    )
+    if user is None:
+        raise HTTPException(
+            status.HTTP_400_BAD_REQUEST, "user information doesn't exist"
+        )
+    included_keys = []
+    if (
+        Scopes.EMAIL.value in user_info.scopes
+        or Scopes.PROFILE.value in user_info.scopes
+    ):
+        included_keys = ["email"]
+    if Scopes.PROFILE.value in user_info.scopes:
+        included_keys += [
+            "first_name",
+            "surname",
+            "dob",
+            "postcode",
+            "created_at",
+        ]
+    return user.as_dict(included_keys=included_keys)
 
 
 # @router.get("/session/status")

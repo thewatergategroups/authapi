@@ -20,7 +20,8 @@ from ....database.models import (
 )
 from ....deps import get_async_session
 from ...tools import blake2b_hash
-from ...validator import has_admin_scope, validate_jwt
+from ...validator import session_has_admin_scope
+
 from .schemas import (
     AddUserRoleBody,
     RoleAddBody,
@@ -31,7 +32,7 @@ from .schemas import (
 
 router = APIRouter(
     tags=["users"],
-    dependencies=[Depends(has_admin_scope())],
+    dependencies=[Depends(session_has_admin_scope())],
 )
 
 
@@ -131,14 +132,12 @@ async def get_users(session: AsyncSession = Depends(get_async_session)):
 
 @router.get("/users/user")
 async def get_user(
-    user_info: UserInfo = Depends(validate_jwt),
+    user_info: UserInfo = Depends(session_has_admin_scope),
     session: AsyncSession = Depends(get_async_session),
 ):
     """Get user information"""
-    roles = await get_user_roles(user_info.username, session)
-    user = await session.scalar(
-        select(UserModel).where(UserModel.id_ == user_info.username)
-    )
+    roles = await get_user_roles(user_info.sub, session)
+    user = await session.scalar(select(UserModel).where(UserModel.id_ == user_info.sub))
     if not user:
         raise HTTPException(400, "user not found")
     return {

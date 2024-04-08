@@ -1917,13 +1917,13 @@ test = ["argcomplete (>=3.0.3)", "mypy (>=1.7.0)", "pre-commit", "pytest (>=7.0,
 
 [[package]]
 name = "trekkers"
-version = "0.2.2"
+version = "0.2.3"
 description = ""
 optional = false
 python-versions = ">=3.11,<3.12"
 files = [
-    {file = "trekkers-0.2.2-py3-none-any.whl", hash = "sha256:5e3de60320a544eecfaa2199a8a70f194d7067e7f64d815ae01d7c375f5eeee1"},
-    {file = "trekkers-0.2.2.tar.gz", hash = "sha256:a0699420a7e9d3b6b78c870613a0437d162b91a1b1297eae169356ccb09b7737"},
+    {file = "trekkers-0.2.3-py3-none-any.whl", hash = "sha256:52d30bc7f97eec25e5fdbbd923eaa85f4a3751b9266e3814ac00f6f5ef5c82ac"},
+    {file = "trekkers-0.2.3.tar.gz", hash = "sha256:d9cd2138734dc1452e13ced35d5e2cc3be65185f3b087d4377f3a050d00b92e8"},
 ]
 
 [package.dependencies]
@@ -2102,13 +2102,13 @@ files = [
 
 [[package]]
 name = "yumi"
-version = "0.2.0"
+version = "0.3.1"
 description = "helper package"
 optional = false
 python-versions = ">=3.11,<3.12"
 files = [
-    {file = "yumi-0.2.0-py3-none-any.whl", hash = "sha256:cf9f480d0907d7b8c45c89b5330d5e7cb7a562e5613297c96b3267e6f3b55f34"},
-    {file = "yumi-0.2.0.tar.gz", hash = "sha256:c4e1e15bcffe1a31eaf19f03220382539f6c71a25abf50006e4cf14db304d40d"},
+    {file = "yumi-0.3.1-py3-none-any.whl", hash = "sha256:647ff8460f1b08c850501e655dd23c50844fab7a736886a373dc544990375c4e"},
+    {file = "yumi-0.3.1.tar.gz", hash = "sha256:5b6109b8132f9dc171e054315103df8fe56b9ce053b2514f086c1c627c055eb2"},
 ]
 
 [package.dependencies]
@@ -2125,4 +2125,4 @@ reference = "kube"
 [metadata]
 lock-version = "2.0"
 python-versions = "~3.11"
-content-hash = "559d517508de5dee9c223a7568c0cea21a457d388507089cc7dbc457e89935ae"
+content-hash = "85098431e840f488f3f2eb6abb83afec7d7a1333dda82f65a168d30899275056"

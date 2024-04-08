@@ -21,7 +21,7 @@ from ....database.models import (
 )
 from ....deps import get_async_session
 from ...tools import blake2b_hash, generate_random_password
-from ...validator import has_admin_scope
+from ...validator import session_has_admin_scope
 from .schemas import (
     ClientAddBody,
     ClientGrantBody,
@@ -32,7 +32,7 @@ from .schemas import (
 router = APIRouter(
     prefix="/clients",
     tags=["clients"],
-    dependencies=[Depends(has_admin_scope())],
+    dependencies=[Depends(session_has_admin_scope())],
 )
 
 
