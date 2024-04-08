@@ -28,26 +28,22 @@ async def validate_session(
     """
     try:
         if session_id is None:
-            raise HTTPException(status.HTTP_401_UNAUTHORIZED, "session id missing")
+            raise NotAuthorized("session id missing")
         session_model = await SessionModel.select(session_id, session)
         if session_model is None:
-            raise HTTPException(status.HTTP_401_UNAUTHORIZED, "session doesn't exist")
+            raise NotAuthorized("session doesn't exist")
         if session_model.user_agent != user_agent:
-            raise HTTPException(
-                status.HTTP_401_UNAUTHORIZED, "User agent doesn't match"
-            )
+            raise NotAuthorized("User agent doesn't match")
         if session_model.ip_address != request.client.host:
-            raise HTTPException(status.HTTP_401_UNAUTHORIZED, "client location changed")
+            raise NotAuthorized("client location changed")
         if session_model.expires_at < datetime.now(timezone.utc).replace(tzinfo=None):
             await SessionModel.delete(session_id, session)
-            raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Session has expired")
+            raise NotAuthorized("Session has expired")
         if session_model.last_active_time < (
             datetime.now(timezone.utc) - timedelta(minutes=20)
         ).replace(tzinfo=None):
             await SessionModel.delete(session_id, session)
-            raise HTTPException(
-                status.HTTP_401_UNAUTHORIZED, "Session has expired due to inactivity"
-            )
+            raise NotAuthorized("Session has expired due to inactivity")
         email = await UserModel.select_email_from_id(session_model.user_id, session)
         return UserInfo(sub=email, scopes=session_model.scopes)
 
