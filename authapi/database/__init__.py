@@ -13,9 +13,11 @@ from .models import (
     ScopesModel,
     UserModel,
     UserRoleMapModel,
+    RefreshTokenModel,
 )
 
 __all__ = [
+    "RefreshTokenModel",
     "ScopesModel",
     "UserModel",
     "UserRoleMapModel",

@@ -2,9 +2,11 @@
 Test configuration
 """
 
+from datetime import datetime, timezone
 import time
 from multiprocessing import Process
 
+from freezegun import freeze_time
 import pytest
 import uvicorn
 from trekkers import database

@@ -4,7 +4,7 @@ Public endpoints for authentication and authorization
 
 import base64
 import hashlib
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from uuid import UUID
 
 import jwt
@@ -26,6 +26,7 @@ from ....database.models import (
     UserModel,
     UserRoleMapModel,
     AuthorizationCodeModel,
+    RefreshTokenModel,
 )
 from ....deps import get_async_session, get_templates
 from ....schemas import Alg
@@ -38,6 +39,7 @@ from ..oidc.schemas import (
     GrantTypes,
     OidcTokenBody,
     ResponseTypes,
+    RefreshTokenStatus,
 )
 from .schemas import UserLoginBody
 
@@ -209,12 +211,16 @@ async def authorize_oidc_request(
         return RedirectResponse(f"{redirect_uri}?id_token={token}&state={state}", 302)
 
     elif response_type == ResponseTypes.CODE:
+        user_id = await UserModel.select_id_from_email(user_info.username, session)
+        if user_id is None:
+            raise HTTPException(401, "user not found")
+
         code = generate_random_password()
         code_model = AuthorizationCodeModel(
             code=code,
             client_id=client_id,
             scopes=allowed_scopes,
-            username=user_info.username,
+            user_id=user_id,
             redirect_uri=redirect_uri,
             code_challenge=code_challenge,
             code_challenge_method=code_challenge_method,
@@ -272,7 +278,7 @@ async def auth_code_flow_validation(data: OidcTokenBody, session: AsyncSession):
     ):
         raise HTTPException(400, "Code challenge method not allowed")
 
-    return code_data.scopes, code_data.username
+    return code_data.scopes, code_data.user_id
 
 
 async def implicit_flow(data: OidcTokenBody, session: AsyncSession):
@@ -306,6 +312,31 @@ async def implicit_flow(data: OidcTokenBody, session: AsyncSession):
             )
         )
     ).all()
+
+
+async def refresh_token_flow(data: OidcTokenBody, session: AsyncSession):
+    """validate input parameters to the refresh token flow"""
+    if data.refresh_token is None:
+        raise HTTPException(400, "refresh token is a required parameter")
+
+    token = await RefreshTokenModel.select(data.refresh_token, session)
+
+    if not token:
+        raise HTTPException(401, "token not valid")
+
+    if token.expires_at < datetime.now(timezone.utc).replace(tzinfo=None):
+        await RefreshTokenModel.delete(data.refresh_token, session)
+        raise HTTPException(401, "Refresh token has expired")
+
+    if data.client_id != token.client_id:
+        raise HTTPException(
+            401,
+            "client who got issued the token is not the same as the client making the request",
+        )
+    if token.status != RefreshTokenStatus.ACTIVE:
+        raise HTTPException(401, "Refresh token is not active")
+
+    return token.scopes, token.user_id
 
 
 def build_client_token(
@@ -357,24 +388,32 @@ async def get_token(
     if client_secret_hash is None:
         raise HTTPException(404, "client not found")
 
+    response = dict()
+    user_id = None
     if blake2b_hash(data.client_secret) != client_secret_hash:
         raise HTTPException("incorrect client hash")
-
     if data.grant_type == GrantTypes.AUTHORIZATION_CODE:
-        scopes, username = await auth_code_flow_validation(data, session)
+        scopes, user_id = await auth_code_flow_validation(data, session)
+        response["refresh_token"] = await RefreshTokenModel.insert(
+            user_id, data.client_id, scopes, RefreshTokenStatus.ACTIVE, session
+        )
     elif data.grant_type == GrantTypes.IMPLICIT:
         scopes = await implicit_flow(data, session)
 
+    elif data.grant_type == GrantTypes.REFRESH_TOKEN:
+        scopes, user_id = await refresh_token_flow(data, session)
     token, expires_in = build_client_token(str(data.client_id), scopes, data.alg)
-    response = {
-        "access_token": token,
-        "token_type": "Bearer",
-        "scopes": scopes,
-        "expires_in": expires_in,
-    }
 
-    if Scopes.OPENID in scopes:
-        user_token = build_user_token(username, audience=str(data.client_id))
+    response.update(
+        access_token=token,
+        token_type="Bearer",
+        scopes=scopes,
+        expires_in=expires_in,
+    )
+
+    if Scopes.OPENID in scopes and user_id is not None:
+        email = await UserModel.select_email_from_id(user_id, session)
+        user_token = build_user_token(email, audience=str(data.client_id))
         response["id_token"] = user_token
 
     return response
@@ -412,3 +451,13 @@ async def get_userinfo(
 ):
     """Return client identity"""
     return await get_client(UUID(user_info.username), session)
+
+
+# @router.get("/session/status")
+# async def get_session_status(
+#     session: AsyncSession = Depends(get_async_session),
+#     user_info: UserInfo = Depends(validate_jwt),
+#     _=Depends(has_openid_scope),
+# ):
+#     """Return client identity"""
+#     return await get_client(UUID(user_info.username), session)

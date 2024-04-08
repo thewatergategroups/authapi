@@ -23,6 +23,13 @@ class ClientType(StrEnum):
         return [item.value for item in cls]
 
 
+class RefreshTokenStatus(StrEnum):
+    """Status of a refresh token"""
+
+    ACTIVE = "active"
+    DISABLED = "disabled"
+
+
 class GrantTypes(StrEnum):
     """
     Allowed Grant Types
@@ -34,7 +41,7 @@ class GrantTypes(StrEnum):
 
     AUTHORIZATION_CODE = "authorization_code"
     IMPLICIT = "implicit"
-    # REFRESH_TOKEN = "refresh_token"
+    REFRESH_TOKEN = "refresh_token"
     # PASSWORD = "password"
 
 
@@ -57,6 +64,7 @@ class OidcTokenBody(BaseModel):
     grant_type: GrantTypes
     code: str | None = None
     code_verifier: str | None = None
+    refresh_token: str | None = None
     redirect_uri: str
     alg: Alg = Alg.EC
     scope: str | None
@@ -72,6 +80,7 @@ class OidcTokenBody(BaseModel):
         redirect_uri: str = Form(...),
         alg: Alg = Form(Alg.EC),
         scope: str = Form(None),
+        refresh_token: str = Form(None),
     ):
         """Allows use of this model as form data in an endpoint"""
         return cls(
@@ -83,6 +92,7 @@ class OidcTokenBody(BaseModel):
             redirect_uri=redirect_uri,
             alg=alg,
             scope=scope,
+            refresh_token=refresh_token,
         )
 
 
