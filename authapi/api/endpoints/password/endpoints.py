@@ -132,8 +132,8 @@ async def get_users(session: AsyncSession = Depends(get_async_session)):
 
 @router.get("/users/user")
 async def get_user(
-    user_info: UserInfo = Depends(session_has_admin_scope),
     session: AsyncSession = Depends(get_async_session),
+    user_info: UserInfo = Depends(session_has_admin_scope()),
 ):
     """Get user information"""
     roles = await get_user_roles(user_info.sub, session)
