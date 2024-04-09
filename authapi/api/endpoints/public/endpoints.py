@@ -141,13 +141,13 @@ async def get_password_flow_token(
     id_token = build_user_token(data.email, alg=data.alg)
     response = JSONResponse({"id_token": id_token}, 200)
     response.set_cookie(
-        "session_id", session_id, expires=expires_at, secure=True, httponly=True
+        "session_id", session_id, expires=expires_at, #secure=True, httponly=True
     )
     if data.redirect_url:
         response.status_code = 303
         response.headers["Location"] = data.redirect_url
     response.set_cookie(
-        "id_token", id_token, expires=expires_at, secure=True, httponly=True
+        "id_token", id_token, expires=expires_at,#  secure=True, httponly=True
     )
     return response
 
