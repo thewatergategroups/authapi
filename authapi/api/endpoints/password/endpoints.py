@@ -136,12 +136,14 @@ async def get_user(
     user_info: UserInfo = Depends(session_has_admin_scope()),
 ):
     """Get user information"""
-    roles = await get_user_roles(user_info.sub, session)
-    user = await session.scalar(select(UserModel).where(UserModel.id_ == user_info.sub))
+    user = await session.scalar(
+        select(UserModel).where(UserModel.email == user_info.sub)
+    )
+    roles = await get_user_roles(user.id_, session)
     if not user:
         raise HTTPException(400, "user not found")
     return {
-        **user.as_dict(included_keys=[user.get_all_keys(["pws_hash"])]),
+        **user.as_dict(included_keys=user.get_all_keys(["pwd_hash", "id_"])),
         "roles": roles,
     }
 
