@@ -49,11 +49,12 @@ async def validate_session(
 
     except NotAuthorized as exc:
         redirect_url = quote(f"{request.url}?{request.query_params}")
-        headers = {
-            "Location": f"/login?redirect_url={redirect_url}",
-        }
         raise HTTPException(
-            status.HTTP_303_SEE_OTHER, "You are not authenticated", headers
+            status.HTTP_303_SEE_OTHER,
+            "You are not authenticated",
+            {
+                "Location": f"/login?redirect_url={redirect_url}",
+            },
         ) from exc
 
 
