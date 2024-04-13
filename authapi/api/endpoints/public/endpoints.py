@@ -9,12 +9,12 @@ from typing import Annotated
 from uuid import UUID
 
 import jwt
-from fastapi import Depends, HTTPException, Header, Request, status
+from fastapi import Cookie, Depends, HTTPException, Header, Request, Response, status
 from fastapi.responses import HTMLResponse, JSONResponse, RedirectResponse
 from fastapi.routing import APIRouter
 from sqlalchemy import exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
-from yumi import Jwt, Scopes, UserInfo
+from yumi import Jwt, NotAuthorized, Scopes, UserInfo
 
 
 from ....database.models import (
@@ -33,7 +33,12 @@ from ....deps import get_async_session, get_templates
 from ....schemas import Alg
 from ....settings import get_settings
 from ...tools import blake2b_hash, generate_random_password
-from ...validator import session_has_admin_scope, validate_client_token
+from ...validator import (
+    session_has_admin_scope,
+    validate_client_token,
+    session_status,
+    validate_session,
+)
 from ..oidc.schemas import (
     ClientType,
     CodeChallengeMethods,
@@ -81,6 +86,33 @@ def build_user_token(
     )
 
 
+@router.get("/iframe-js", response_class=Response)
+def iframe_js():
+    """Get session checking javascript to be run the in the browser"""
+    js_code = """
+    window.addEventListener('load', function() {
+        const xhr = new XMLHttpRequest();
+        xhr.open('GET', '/session/status', true);
+        xhr.withCredentials = true;
+        xhr.onreadystatechange = function() {
+            if (xhr.readyState === 4) {
+                if (xhr.status === 200) {
+                    const response = JSON.parse(xhr.responseText);
+                    if (!response.session_active) {
+                        window.location.href = '/login';
+                        console.log('Session is inactive, please log in again.');
+                    }
+                } else {
+                    console.error('Failed to retrieve session status');
+                }
+            }
+        };
+        xhr.send();
+    });
+    """
+    return Response(content=js_code, media_type="application/javascript")
+
+
 @router.get("/login", response_class=HTMLResponse)
 async def get_login(request: Request, redirect_url: str = None):
     """Serve login page"""
@@ -89,8 +121,32 @@ async def get_login(request: Request, redirect_url: str = None):
     )
 
 
+@router.get("/session/status")
+async def get_session_status(
+    session_id: Annotated[str | None, Cookie()] = None,
+    session: AsyncSession = Depends(get_async_session),
+):
+    """Check the status of the currently active session"""
+    try:
+        await session_status(session_id, session)
+        return dict(session_active=True)
+    except NotAuthorized:
+        return dict(session_active=False)
+
+
+@router.post("/logout")
+async def logout(
+    session_id: Annotated[str | None, Cookie()] = None,
+    session: AsyncSession = Depends(get_async_session),
+    _=Depends(validate_session),
+):
+    """Log out of the application"""
+    await SessionModel.delete(session_id, session)
+    return {"detail": "Success"}
+
+
 @router.post("/login")
-async def get_password_flow_token(
+async def login(
     request: Request,
     data: UserLoginBody = Depends(UserLoginBody.as_form),
     user_agent: Annotated[str | None, Header()] = None,
@@ -141,13 +197,17 @@ async def get_password_flow_token(
     id_token = build_user_token(data.email, alg=data.alg)
     response = JSONResponse({"id_token": id_token}, 200)
     response.set_cookie(
-        "session_id", session_id, expires=expires_at, #secure=True, httponly=True
+        "session_id",
+        session_id,
+        expires=expires_at,  # secure=True, httponly=True
     )
     if data.redirect_url:
         response.status_code = 303
         response.headers["Location"] = data.redirect_url
     response.set_cookie(
-        "id_token", id_token, expires=expires_at,#  secure=True, httponly=True
+        "id_token",
+        id_token,
+        expires=expires_at,  #  secure=True, httponly=True
     )
     return response
 
@@ -488,13 +548,3 @@ async def get_userinfo(
             "created_at",
         ]
     return user.as_dict(included_keys=included_keys)
-
-
-# @router.get("/session/status")
-# async def get_session_status(
-#     session: AsyncSession = Depends(get_async_session),
-#     user_info: UserInfo = Depends(validate_jwt),
-#     _=Depends(has_openid_scope),
-# ):
-#     """Return client identity"""
-#     return await get_client(UUID(user_info.username), session)

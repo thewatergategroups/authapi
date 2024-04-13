@@ -138,7 +138,7 @@ def authorize(
         timeout=1,
         allow_redirects=False,
     )
-    return resp
+    return resp, session_id
 
 
 def test_authorization_token_flow(
@@ -153,12 +153,26 @@ def test_authorization_token_flow(
     4. client token returned
     """
     data = make_test_client(server)
-    resp = authorize(server, data.get("client_id"), ResponseTypes.TOKEN, "read")
+    resp, session_id = authorize(
+        server, data.get("client_id"), ResponseTypes.TOKEN, "read"
+    )
     data = resp.headers["Location"]
     assert "access_token=" in data
     assert "token_type=Bearer" in data
     assert "state=extradata" in data
     assert server in data
+    resp = requests.get(
+        f"{server}/session/status", cookies={"session_id": session_id}, timeout=1
+    )
+    assert resp.json() == {"session_active": True}
+    resp = requests.post(
+        f"{server}/logout", cookies={"session_id": session_id}, timeout=1
+    )
+    assert resp.status_code == 200
+    resp = requests.get(
+        f"{server}/session/status", cookies={"session_id": session_id}, timeout=1
+    )
+    assert resp.json() == {"session_active": False}
 
 
 def test_authorization_id_token_flow(server):
@@ -171,7 +185,7 @@ def test_authorization_id_token_flow(server):
     4. id token with information about user returned
     """
     data = make_test_client(server)
-    resp = authorize(
+    resp, _ = authorize(
         server, data.get("client_id"), ResponseTypes.ID_TOKEN, "read openid"
     )
     data = resp.headers["Location"]
@@ -197,7 +211,7 @@ def test_authorization_code_flow_openid_plain_code_chal_method(
     scopes = ["read", "openid", "email"]
     client_secret = data.get("client_secret")
     code_verifier = secrets.token_urlsafe(50)
-    resp = authorize(
+    resp, _ = authorize(
         server,
         data.get("client_id"),
         ResponseTypes.CODE,
@@ -267,7 +281,7 @@ def test_authorization_code_flow_no_openid_s265_chal_method(
     client_id = data.get("client_id")
     client_secret = data.get("client_secret")
 
-    resp = authorize(
+    resp, _ = authorize(
         server,
         client_id,
         ResponseTypes.CODE,
@@ -321,7 +335,7 @@ def test_authorization_code_flow_no_openid_no_code_challenge(
 
     client_id = data.get("client_id")
     client_secret = data.get("client_secret")
-    resp = authorize(server, client_id, ResponseTypes.CODE, "read")
+    resp, _ = authorize(server, client_id, ResponseTypes.CODE, "read")
 
     data = resp.headers["Location"]
     parsed_url = urlparse(data)
@@ -399,7 +413,7 @@ def test_get_token_from_refresh_token_flow(server):
     client_id = data.get("client_id")
     client_secret = data.get("client_secret")
     code_verifier = secrets.token_urlsafe(50)
-    resp = authorize(
+    resp, _ = authorize(
         server,
         client_id,
         ResponseTypes.CODE,
