@@ -508,6 +508,7 @@ async def get_well_known_open_id():
         "token_endpoint": f"{domain}/token",
         "userinfo_endpoint": f"{domain}/userinfo",
         "jwks_uri": f"{domain}/keys",
+        "end_session_endpoint": f"{domain}/logout",
         "response_types_supported": ResponseTypes.get_all(),
         "response_modes_supported": ["query"],
         "subject_types_supported": ClientType.get_all(),
