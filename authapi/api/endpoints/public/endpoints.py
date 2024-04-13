@@ -89,27 +89,54 @@ def build_user_token(
 @router.get("/iframe-js", response_class=Response)
 def iframe_js():
     """Get session checking javascript to be run the in the browser"""
-    js_code = """
-    window.addEventListener('load', function() {
-        const xhr = new XMLHttpRequest();
-        xhr.open('GET', '/session/status', true);
-        xhr.withCredentials = true;
-        xhr.onreadystatechange = function() {
-            if (xhr.readyState === 4) {
-                if (xhr.status === 200) {
-                    const response = JSON.parse(xhr.responseText);
-                    if (!response.session_active) {
-                        window.location.href = '/login';
-                        console.log('Session is inactive, please log in again.');
-                    }
-                } else {
-                    console.error('Failed to retrieve session status');
-                }
+    js_code = (
+        """
+        window.addEventListener('message', function(event) {
+        """
+        + f"""
+            if (event.origin !== "{get_settings().jwt_config.jwks_server_url}") {{
+        """
+        + """
+                return; // }Ignore messages from untrusted origins
             }
-        };
-        xhr.send();
-    });
+            if (event.data.action === 'checkStatus') {
+                checkStatus(); // Function that checks the session status
+            }
+        });
+        // Function to simulate a session check
+        function checkStatus() {
+            console.log('Checking status within iframe');
+        """
+        + f"""
+            fetch('{get_settings().jwt_config.jwks_server_url}/session/status', {{ credentials: 'include' }})
+        """
+        + """
+                .then(response => response.json())
+                .then(data => {
+                    if (!data.session_active) {
+        """
+        + f"""
+                            window.location.href = '{get_settings().jwt_config.jwks_server_url}/login';
+        """
+        + """
+                            console.log('Session is inactive, please log in again.');
+                    } else {
+                        console.log('Session is active, no action needed.');
+                    }
+                })
+                .catch(error => {
+                    console.error('Failed to retrieve session status:', error);
+                    // Handle errors, e.g., notify parent
+                });
+        }
+
+        // Expose the checkStatus function to the parent window
+        window.checkStatus = checkStatus;
+
+        // Optionally check status when iframe loads
+        window.onload = checkStatus;
     """
+    )
     return Response(content=js_code, media_type="application/javascript")
 
 
@@ -124,14 +151,24 @@ async def get_login(request: Request, redirect_url: str = None):
 @router.get("/session/status")
 async def get_session_status(
     session_id: Annotated[str | None, Cookie()] = None,
+    origin: Annotated[str | None, Header()] = None,
     session: AsyncSession = Depends(get_async_session),
 ):
     """Check the status of the currently active session"""
+    if origin is None:
+        origin = "null"
     try:
         await session_status(session_id, session)
-        return dict(session_active=True)
+        content = dict(session_active=True)
     except NotAuthorized:
-        return dict(session_active=False)
+        content = dict(session_active=False)
+    return JSONResponse(
+        content=content,
+        headers={
+            "Access-Control-Allow-Origin": origin,
+            "Access-Control-Allow-Credentials": "true",
+        },
+    )
 
 
 @router.post("/logout")

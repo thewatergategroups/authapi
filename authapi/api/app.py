@@ -24,9 +24,10 @@ def create_app() -> FastAPI:
         description="Jwks Authentication API",
         version="1.0",
     )
+    origins = ["null", get_settings().jwt_config.jwks_server_url]
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=["*"],
+        allow_origins=origins,
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
