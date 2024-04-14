@@ -166,6 +166,7 @@ class AuthorizationCodeModel(BaseSql):
     redirect_uri: Mapped[str]
     code_challenge: Mapped[str] = mapped_column(nullable=True)
     code_challenge_method: Mapped[str] = mapped_column(nullable=True)
+    nonce: Mapped[str] = mapped_column(nullable=True)
 
     async def insert(self, session: AsyncSession):
         """Insert into the database"""

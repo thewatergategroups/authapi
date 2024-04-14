@@ -59,8 +59,8 @@ class ClientAddBody(BaseModel):
 class OidcTokenBody(BaseModel):
     """Generate client token body"""
 
-    client_id: UUID
-    client_secret: str
+    client_id: UUID | None = None
+    client_secret: str | None = None
     grant_type: GrantTypes
     code: str | None = None
     code_verifier: str | None = None
@@ -72,8 +72,8 @@ class OidcTokenBody(BaseModel):
     @classmethod
     def as_form(
         cls,
-        client_id: UUID = Form(...),
-        client_secret: str = Form(...),
+        client_id: UUID = Form(None),
+        client_secret: str = Form(None),
         grant_type: GrantTypes = Form(...),
         code: str = Form(None),
         code_verifier: str = Form(None),

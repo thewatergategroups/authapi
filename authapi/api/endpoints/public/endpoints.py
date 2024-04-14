@@ -66,11 +66,13 @@ def build_user_token(
     scopes: list[str] | None = None,
     alg: Alg = Alg.EC,
     audience: str = "local",
+    nonce: str | None = None,
 ):
     """Function to creates a user token based on the passed in information"""
     now = datetime.now()
     payload = Jwt(
         sub=email,
+        nonce=nonce,
         exp=(now + timedelta(hours=1)).timestamp(),
         aud=audience,
         iss=get_settings().jwt_config.jwks_server_url,
@@ -199,7 +201,7 @@ async def login(
         )
     )
     if not us_exists:
-        raise HTTPException(401, "Unauthorized")
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Unauthorized")
 
     user_id = await UserModel.select_id_from_email(data.email, session)
 
@@ -258,6 +260,7 @@ async def authorize_oidc_request(
     scope: str,
     code_challenge: str | None = None,
     code_challenge_method: CodeChallengeMethods | None = None,
+    nonce: str | None = None,
     alg: Alg = Alg.EC,
     session: AsyncSession = Depends(get_async_session),
     user_info: UserInfo = Depends(session_has_admin_scope()),
@@ -277,7 +280,7 @@ async def authorize_oidc_request(
     ).scalar_one_or_none()
 
     if not grant_allowed:
-        raise HTTPException(401, "grant type not allowed")
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "grant type not allowed")
 
     allowed_scopes = (
         await session.scalars(
@@ -292,7 +295,9 @@ async def authorize_oidc_request(
         )
     ).all()
     if not allowed_scopes:
-        raise HTTPException(401, "Requested Scopes not allowed")
+        raise HTTPException(
+            status.HTTP_401_UNAUTHORIZED, "Requested Scopes not allowed"
+        )
 
     uri_allowed = (
         await session.execute(
@@ -303,7 +308,7 @@ async def authorize_oidc_request(
         )
     ).scalar_one_or_none()
     if uri_allowed is None:
-        raise HTTPException(401, "redirect Uri not allowed")
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "redirect Uri not allowed")
 
     if response_type == ResponseTypes.TOKEN:
         token, _ = build_client_token(
@@ -324,7 +329,7 @@ async def authorize_oidc_request(
     elif response_type == ResponseTypes.CODE:
         user_id = await UserModel.select_id_from_email(user_info.sub, session)
         if user_id is None:
-            raise HTTPException(401, "user not found")
+            raise HTTPException(status.HTTP_401_UNAUTHORIZED, "user not found")
 
         code = generate_random_password()
         code_model = AuthorizationCodeModel(
@@ -335,6 +340,7 @@ async def authorize_oidc_request(
             redirect_uri=redirect_uri,
             code_challenge=code_challenge,
             code_challenge_method=code_challenge_method,
+            nonce=nonce,
         )
         await code_model.insert(session)
 
@@ -364,15 +370,22 @@ async def auth_code_flow_validation(data: OidcTokenBody, session: AsyncSession):
     await AuthorizationCodeModel.delete(data.code, session)
 
     if code_data is None and data.grant_type == GrantTypes.AUTHORIZATION_CODE:
-        raise HTTPException(401, "Authorization code not found")
+        raise HTTPException(
+            status.HTTP_401_UNAUTHORIZED, "Authorization code not found"
+        )
     if code_data.client_id != data.client_id:
-        raise HTTPException(401, "authorization code not related to this client")
+        raise HTTPException(
+            status.HTTP_401_UNAUTHORIZED,
+            "authorization code not related to this client",
+        )
     if code_data.redirect_uri != data.redirect_uri:
         raise HTTPException(400, "redirect URI changed")
 
     if code_data.code_challenge_method == CodeChallengeMethods.PLAIN:
         if code_data.code_challenge != data.code_verifier:
-            raise HTTPException(401, "incorrect code challenge")
+            raise HTTPException(
+                status.HTTP_401_UNAUTHORIZED, "incorrect code challenge"
+            )
     elif code_data.code_challenge_method == CodeChallengeMethods.S256:
         hashed_code_verifier = (
             base64.urlsafe_b64encode(
@@ -382,14 +395,16 @@ async def auth_code_flow_validation(data: OidcTokenBody, session: AsyncSession):
             .rstrip("=")
         )
         if hashed_code_verifier != code_data.code_challenge:
-            raise HTTPException(401, "Incorrect code challenge")
+            raise HTTPException(
+                status.HTTP_401_UNAUTHORIZED, "Incorrect code challenge"
+            )
     elif (
         code_data.code_challenge is not None
         and code_data.code_challenge_method is not None
     ):
         raise HTTPException(400, "Code challenge method not allowed")
 
-    return code_data.scopes, code_data.user_id
+    return code_data.scopes, code_data.user_id, code_data.nonce
 
 
 async def implicit_flow(data: OidcTokenBody, session: AsyncSession):
@@ -408,7 +423,7 @@ async def implicit_flow(data: OidcTokenBody, session: AsyncSession):
     ).scalar_one_or_none()
 
     if not grant_allowed:
-        raise HTTPException(401, "grant type not allowed")
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "grant type not allowed")
     scopes = data.scope.split(" ")
 
     return (
@@ -433,19 +448,19 @@ async def refresh_token_flow(data: OidcTokenBody, session: AsyncSession):
     token = await RefreshTokenModel.select(data.refresh_token, session)
 
     if not token:
-        raise HTTPException(401, "token not valid")
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "token not valid")
 
     if token.expires_at < datetime.now(timezone.utc).replace(tzinfo=None):
         await RefreshTokenModel.delete(data.refresh_token, session)
-        raise HTTPException(401, "Refresh token has expired")
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Refresh token has expired")
 
     if data.client_id != token.client_id:
         raise HTTPException(
-            401,
+            status.HTTP_401_UNAUTHORIZED,
             "client who got issued the token is not the same as the client making the request",
         )
     if token.status != RefreshTokenStatus.ACTIVE:
-        raise HTTPException(401, "Refresh token is not active")
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Refresh token is not active")
 
     return token.scopes, token.user_id
 
@@ -484,28 +499,46 @@ def build_client_token(
 
 @router.post("/token")
 async def get_token(
-    data: OidcTokenBody = Depends(OidcTokenBody.as_form),
     session: AsyncSession = Depends(get_async_session),
+    data: OidcTokenBody = Depends(OidcTokenBody.as_form),
+    authorization: Annotated[str | None, Header()] = None,
 ):
     """
     Get client token
     Authenticated with a Client ID and Client Secret
     """
+    if data.client_id is None and data.client_secret is None:
+        ### support basic auth
+        if authorization is None:
+            raise HTTPException(
+                status.HTTP_422_UNPROCESSABLE_ENTITY,
+                "Client ID and Client Secret Missing",
+            )
+        type_, value = authorization.split(" ")
+        if type_.lower() != "basic":
+            raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY)
+        client_id, data.client_secret = (
+            base64.b64decode(value.encode()).decode().split(":")
+        )
+        data.client_id = UUID(client_id)
+        ###
+
     client_secret_hash = (
         await session.execute(
             select(ClientModel.secret_hash).where(ClientModel.id_ == data.client_id)
         )
     ).scalar_one_or_none()
     if client_secret_hash is None:
-        raise HTTPException(404, "client not found")
+        raise HTTPException(status.HTTP_404, "client not found")
 
     response = dict()
     user_id = None
     email = None
+    nonce = None
     if blake2b_hash(data.client_secret) != client_secret_hash:
-        raise HTTPException("incorrect client hash")
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "incorrect client hash")
     if data.grant_type == GrantTypes.AUTHORIZATION_CODE:
-        scopes, user_id = await auth_code_flow_validation(data, session)
+        scopes, user_id, nonce = await auth_code_flow_validation(data, session)
         response["refresh_token"] = await RefreshTokenModel.insert(
             user_id, data.client_id, scopes, RefreshTokenStatus.ACTIVE, session
         )
@@ -526,7 +559,7 @@ async def get_token(
     )
 
     if Scopes.OPENID in scopes and email is not None:
-        user_token = build_user_token(email, audience=str(data.client_id))
+        user_token = build_user_token(email, audience=str(data.client_id), nonce=nonce)
         response["id_token"] = user_token
 
     return response
