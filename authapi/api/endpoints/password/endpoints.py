@@ -126,8 +126,10 @@ async def update_user(
 @router.get("/users")
 async def get_users(session: AsyncSession = Depends(get_async_session)):
     """get all users"""
-    users = (await session.scalars(select(UserModel.email))).all()
-    return users
+    users = (
+        (await session.execute(select(UserModel.id_, UserModel.email))).tuples().all()
+    )
+    return [dict(user_id=user[0], email=user[1]) for user in users]
 
 
 @router.get("/users/user")
