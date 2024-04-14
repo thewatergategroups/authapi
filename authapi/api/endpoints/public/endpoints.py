@@ -529,7 +529,7 @@ async def get_token(
         )
     ).scalar_one_or_none()
     if client_secret_hash is None:
-        raise HTTPException(status.HTTP_404, "client not found")
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "client not found")
 
     response = dict()
     user_id = None
