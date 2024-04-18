@@ -8,7 +8,7 @@ build:
 	--build-arg="PYPI_USER=${PYPI_USER}" \
 	--build-arg="PYPI_PASS=${PYPI_PASS}" \
 	--target development \
-	-t $(REPOSITORY) \
+	-t ghcr.io/1ndistinct/$(REPOSITORY):latest \
 	. 
 
 up: 
@@ -34,14 +34,7 @@ down:
 	docker compose --profile "*" down
 
 
-push:
-	docker build --network=host \
-	-f ./Dockerfile \
-	--build-arg="PYPI_USER=${PYPI_USER}" \
-	--build-arg="PYPI_PASS=${PYPI_PASS}" \
-	--target production \
-	-t ghcr.io/1ndistinct/$(REPOSITORY):latest \
-	. 
+push: build
 	docker push  ghcr.io/1ndistinct/$(REPOSITORY):latest
 
 template:
