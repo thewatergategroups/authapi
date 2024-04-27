@@ -3,13 +3,3 @@ imageName: ghcr.io/1ndistinct/authapi:latest
 
 regCredName: regcred
 
-secrets:
-  SALT: <SECRET> 
-  LOG_LEVEL: INFO
-  PGHOST: <SECRET>
-  PGDATABASE: <SECRET>
-  PGPASSWORD: <SECRET>
-  PGUSER: <SECRET>
-  DB_SCHEMA: auth
-  ADMIN_PASSWORD: <SECRET>
-  JWKS_SERVER_URL: http://authapi.apps.svc.cluster.local:8000

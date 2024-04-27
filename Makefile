@@ -35,7 +35,7 @@ down:
 
 
 push: build
-	docker push  ghcr.io/1ndistinct/$(REPOSITORY):latest
+	docker push ghcr.io/1ndistinct/$(REPOSITORY):latest
 
 template:
 	if [ ! -f secret_vals.yaml ]; then echo "secrets: {}" > secret_vals.yaml; fi
