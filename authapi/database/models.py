@@ -212,9 +212,10 @@ class SessionModel(BaseSql):
         user_agent: str,
         scopes: list[str],
         session: AsyncSession,
-        expires_at: datetime = (datetime.now(timezone.utc) + timedelta(days=1)),
+        expires_at: datetime | None = None,
     ):
         """Insert into the database"""
+        expires_at = expires_at or (datetime.now(timezone.utc) + timedelta(days=1))
         id_ = generate_random_password()
 
         await session.execute(
