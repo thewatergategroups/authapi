@@ -5,6 +5,7 @@ Public endpoints for authentication and authorization
 import base64
 import hashlib
 from datetime import datetime, timedelta, timezone
+import logging
 from typing import Annotated
 from uuid import UUID
 
@@ -184,6 +185,17 @@ async def logout(
     return {"detail": "Success"}
 
 
+def rediret_on_unauthorized(message: str, redirect_url: str | None = None):
+    """Helper function to redirect on unauthorized"""
+    logging.error(message)
+    url = (
+        f"/login?unauthorized=true&redirect_url={redirect_url}"
+        if redirect_url
+        else "/login"
+    )
+    raise HTTPException(status.HTTP_303_SEE_OTHER, message, {"Location": url})
+
+
 @router.post("/login")
 async def login(
     request: Request,
@@ -201,7 +213,7 @@ async def login(
         )
     )
     if not us_exists:
-        raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Unauthorized")
+        rediret_on_unauthorized("username or password incorrect", data.redirect_url)
 
     user_id = await UserModel.select_id_from_email(data.email, session)
 
@@ -221,15 +233,12 @@ async def login(
         allowed_scopes = [scope for scope in data.scope.split(" ") if scope in scopes]
 
     if not allowed_scopes:
-        raise HTTPException(
-            status.HTTP_401_UNAUTHORIZED,
-            "user does not have any of the requested scope",
+        rediret_on_unauthorized(
+            "user does not have any of the requested scope", data.redirect_url
         )
     if user_agent is None:
-        raise HTTPException(
-            status.HTTP_401_UNAUTHORIZED,
-            "user agent must be present",
-        )
+        rediret_on_unauthorized("user agent must be present", data.redirect_url)
+
     session_id, expires_at = await SessionModel.insert(
         user_id, request.client.host, user_agent, allowed_scopes, session
     )

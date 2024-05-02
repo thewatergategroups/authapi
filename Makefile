@@ -7,7 +7,7 @@ build:
 	-f ./Dockerfile \
 	--build-arg="PYPI_USER=${PYPI_USER}" \
 	--build-arg="PYPI_PASS=${PYPI_PASS}" \
-	--target development \
+	--target production \
 	-t ghcr.io/1ndistinct/$(REPOSITORY):latest \
 	. 
 
