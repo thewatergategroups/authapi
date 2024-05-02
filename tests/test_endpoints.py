@@ -32,7 +32,7 @@ def test_get_token(server, session):
     """
     test getting a user token
     """
-    scopes = ["admin", "read", "write"]
+    scopes = ["admin", "read", "write", "groups"]
     id_token, session_id = get_token(server, ADMIN_EMAIL, scopes)
     fields = id_token.split(".")
     assert len(fields) == 3
@@ -41,11 +41,18 @@ def test_get_token(server, session):
     assert token_info["sub"] == ADMIN_EMAIL
     assert token_info["aud"] == "local"
     assert token_info["iss"] == get_settings().jwt_config.jwks_server_url
+    assert token_info["groups"] == ["admin"]
     sess_model = session.scalar(
         select(SessionModel).where(SessionModel.id_ == blake2b_hash(session_id))
     )
     assert sess_model is not None
-    assert sess_model.scopes == ["admin", "read", "write"]
+    assert sess_model.scopes == ["admin", "read", "write", "groups"]
+    scopes.pop()
+    id_token, session_id = get_token(server, ADMIN_EMAIL, scopes)
+    fields = id_token.split(".")
+    assert len(fields) == 3
+    token_info = json.loads(b64decode(fields[1] + "==").decode())
+    assert token_info.get("groups") is None
 
 
 def test_get_token_disallowed_scope(server, session):
@@ -194,6 +201,9 @@ def test_authorization_id_token_flow(server):
     assert server in data
 
 
+from jwt import PyJWKClient, decode
+
+
 def test_authorization_code_flow_openid_plain_code_chal_method(
     server,
 ):
@@ -208,7 +218,7 @@ def test_authorization_code_flow_openid_plain_code_chal_method(
     data = make_test_client(server)
 
     client_id = data.get("client_id")
-    scopes = ["read", "openid", "email"]
+    scopes = ["read", "openid", "email", "groups"]
     client_secret = data.get("client_secret")
     code_verifier = secrets.token_urlsafe(50)
     resp, _ = authorize(
@@ -246,7 +256,12 @@ def test_authorization_code_flow_openid_plain_code_chal_method(
     )
     data = resp.json()
     token = data.get("access_token")
-    assert data.get("id_token") is not None
+    id_token = data.get("id_token")
+    assert id_token is not None
+    fields = id_token.split(".")
+    assert len(fields) == 3
+    token_info = json.loads(b64decode(fields[1] + "==").decode())
+    assert token_info["groups"] == ["admin"]
     assert data.get("refresh_token") is not None
     assert token is not None
     assert data.get("scopes") == scopes
@@ -255,7 +270,7 @@ def test_authorization_code_flow_openid_plain_code_chal_method(
         timeout=1,
         headers={"Authorization": f"Bearer {token}"},
     )
-    assert resp.json() == {"email": "admin@email.com"}
+    assert resp.json() == dict(email="admin@email.com", groups=["admin"])
 
 
 def test_authorization_code_flow_no_openid_s265_chal_method(

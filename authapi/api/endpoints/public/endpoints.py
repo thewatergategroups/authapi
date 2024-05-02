@@ -68,6 +68,7 @@ def build_user_token(
     alg: Alg = Alg.EC,
     audience: str = "local",
     nonce: str | None = None,
+    groups: list[str] | None = None,
 ):
     """Function to creates a user token based on the passed in information"""
     now = datetime.now()
@@ -78,6 +79,7 @@ def build_user_token(
         aud=audience,
         iss=get_settings().jwt_config.jwks_server_url,
         iat=now.timestamp(),
+        groups=groups,
     )
     if scopes is not None:
         payload.scopes = scopes
@@ -216,17 +218,9 @@ async def login(
         rediret_on_unauthorized("username or password incorrect", data.redirect_url)
 
     user_id = await UserModel.select_id_from_email(data.email, session)
-
+    roles = await UserRoleMapModel.get_user_roles(user_id, session)
     scopes = (
-        await session.scalars(
-            select(RoleScopeMapModel.scope_id).where(
-                RoleScopeMapModel.role_id.in_(
-                    select(UserRoleMapModel.role_id).where(
-                        UserRoleMapModel.user_id == user_id
-                    )
-                )
-            )
-        )
+        await session.scalars(RoleScopeMapModel.get_roles_scopes_stmt(roles))
     ).all()
     allowed_scopes = scopes
     if data.scope is not None:
@@ -242,7 +236,10 @@ async def login(
     session_id, expires_at = await SessionModel.insert(
         user_id, request.client.host, user_agent, allowed_scopes, session
     )
-    id_token = build_user_token(data.email, alg=data.alg)
+    groups = None
+    if Scopes.GROUPS in allowed_scopes:
+        groups = roles
+    id_token = build_user_token(data.email, alg=data.alg, groups=groups)
     response = JSONResponse({"id_token": id_token}, 200)
     response.set_cookie(
         "session_id",
@@ -566,9 +563,15 @@ async def get_token(
         scopes=scopes,
         expires_in=expires_in,
     )
-
-    if Scopes.OPENID in scopes and email is not None:
-        user_token = build_user_token(email, audience=str(data.client_id), nonce=nonce)
+    if (
+        Scopes.OPENID.value in scopes and email is not None
+    ):  # implies user id is also not None
+        groups = None
+        if Scopes.GROUPS in scopes:
+            groups = await UserRoleMapModel.get_user_roles(user_id, session)
+        user_token = build_user_token(
+            email, audience=str(data.client_id), nonce=nonce, groups=groups
+        )
         response["id_token"] = user_token
 
     return response
@@ -614,12 +617,9 @@ async def get_userinfo(
             status.HTTP_400_BAD_REQUEST, "user information doesn't exist"
         )
     included_keys = []
-    if (
-        Scopes.EMAIL.value in user_info.scopes
-        or Scopes.PROFILE.value in user_info.scopes
-    ):
+    if Scopes.EMAIL in user_info.scopes or Scopes.PROFILE in user_info.scopes:
         included_keys = ["email"]
-    if Scopes.PROFILE.value in user_info.scopes:
+    if Scopes.PROFILE in user_info.scopes:
         included_keys += [
             "first_name",
             "surname",
@@ -627,4 +627,7 @@ async def get_userinfo(
             "postcode",
             "created_at",
         ]
-    return user.as_dict(included_keys=included_keys)
+    response = user.as_dict(included_keys=included_keys)
+    if Scopes.GROUPS in user_info.scopes:
+        response["groups"] = await UserRoleMapModel.get_user_roles(user.id_, session)
+    return response

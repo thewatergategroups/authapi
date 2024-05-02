@@ -2100,13 +2100,13 @@ files = [
 
 [[package]]
 name = "yumi"
-version = "0.3.2"
+version = "0.3.4"
 description = "helper package"
 optional = false
 python-versions = ">=3.11,<3.12"
 files = [
-    {file = "yumi-0.3.2-py3-none-any.whl", hash = "sha256:31b6af46477919fddb4a4a4cfe7a2d1d344f5586b12c666bdf5ab179d103a597"},
-    {file = "yumi-0.3.2.tar.gz", hash = "sha256:d8bc47aa521d599b4ba53358b10c24144b97401ab084f0cb1a54bf659ec62744"},
+    {file = "yumi-0.3.4-py3-none-any.whl", hash = "sha256:0f8af1237d16f4808aa0b09627e2a621239aea0008e8348bce4b9e39d8ed6a5d"},
+    {file = "yumi-0.3.4.tar.gz", hash = "sha256:0d8333290378386138d0ae8ac4d23bff8b846c9612349382309278c1daecea01"},
 ]
 
 [package.dependencies]

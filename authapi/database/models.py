@@ -52,7 +52,9 @@ class UserModel(BaseSql):
     @classmethod
     async def select_email_from_id(cls, id_: str, session: AsyncSession):
         """select from the database"""
-        return await session.scalar(select(cls.email).where(cls.id_ == id_))
+        return (
+            await session.execute(select(cls.email).where(cls.id_ == id_))
+        ).scalar_one()
 
 
 class RoleModel(BaseSql):
@@ -80,6 +82,17 @@ class UserRoleMapModel(BaseSql):
         ForeignKey("auth.roles.id_", ondelete="CASCADE"), primary_key=True
     )
 
+    @classmethod
+    async def get_user_roles(cls, user_id: UUID, session: AsyncSession):
+        """return user roles"""
+        return (
+            await session.scalars(
+                select(UserRoleMapModel.role_id).where(
+                    UserRoleMapModel.user_id == user_id
+                )
+            )
+        ).all()
+
 
 class ScopesModel(BaseSql):
     """table definition for storing avaliable scopes"""
@@ -100,6 +113,13 @@ class RoleScopeMapModel(BaseSql):
     role_id: Mapped[str] = mapped_column(
         ForeignKey("auth.roles.id_", ondelete="CASCADE"), primary_key=True
     )
+
+    @classmethod
+    def get_roles_scopes_stmt(cls, role_ids: list[str]):
+        """
+        Get user roles stmt
+        """
+        return select(cls.scope_id).where(cls.role_id.in_(role_ids))
 
 
 class ClientModel(BaseSql):
