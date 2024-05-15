@@ -23,6 +23,8 @@ def create_app() -> FastAPI:
         title="Auth Api",
         description="Jwks Authentication API",
         version="1.0",
+        docs_url=None,
+        redoc_url=None,
     )
     origins = ["null", get_settings().jwt_config.jwks_server_url]
     app.add_middleware(
