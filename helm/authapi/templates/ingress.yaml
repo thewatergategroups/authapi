@@ -1,0 +1,23 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: authapi-ingress
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /
+    kubernetes.io/ingress.class: nginx
+spec:
+  tls:
+  - hosts:
+    - auth.thewatergategroups.com
+    secretName: wildcard-watergate-tls
+  rules:
+  - host: auth.thewatergategroups.com
+    http:
+      paths:
+      - path: /
+        pathType: Prefix
+        backend:
+          service:
+            name: authapi
+            port:
+              number: 8000
