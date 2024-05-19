@@ -176,6 +176,19 @@ async def get_session_status(
     )
 
 
+@router.get("/session/active")
+async def get_session_active(
+    session_id: Annotated[str | None, Cookie()] = None,
+    session: AsyncSession = Depends(get_async_session),
+):
+    """Check the status of the currently active session"""
+    try:
+        await session_status(session_id, session)
+        return Response("success")
+    except NotAuthorized as exc:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED) from exc
+
+
 @router.post("/logout")
 async def logout(
     session_id: Annotated[str | None, Cookie()] = None,
