@@ -146,10 +146,10 @@ def iframe_js():
 
 
 @router.get("/login", response_class=HTMLResponse)
-async def get_login(request: Request, redirect_url: str = None):
+async def get_login(request: Request, redirect_url: str = None, rd: str = None):
     """Serve login page"""
     return get_templates().TemplateResponse(
-        "login.html", {"request": request, "redirect_url": redirect_url}
+        "login.html", {"request": request, "redirect_url": redirect_url or rd}
     )
 
 
