@@ -1,10 +1,13 @@
 on:
   push:
     branches:
-      - master
+      - dev
+      - main
 
 jobs:
-  scan-build-push-workflow:
-    uses: 1ndistinct/ops/.github/workflows/python-docker-workflow-self-hosted.yaml@master
+  Python:
+    uses: 1ndistinct/ops/.github/workflows/python-docker-workflow.yaml@master
     secrets:
       CONTAINER_PAT: ${{ secrets.CONTAINER_PAT }}
+      PYPI_USER: ${{ secrets.PYPI_USER }}
+      PYPI_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
