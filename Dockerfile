@@ -2,7 +2,8 @@ FROM ghcr.io/1ndistinct/ops:python311 AS requirements
 ARG PYPI_USER
 ARG PYPI_PASS
 COPY pyproject.toml poetry.lock ./
-RUN poetry config http-basic.kube $PYPI_USER $PYPI_PASS && poetry install --without dev
+RUN poetry config http-basic.kube $PYPI_USER $PYPI_PASS 
+RUN poetry install --without dev
 
 FROM requirements AS dev_requirements
 RUN poetry install --only dev
