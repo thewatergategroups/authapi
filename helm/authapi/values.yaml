@@ -1,5 +1,5 @@
 
-imageName: ghcr.io/1ndistinct/authapi:latest
+imageName: ghcr.io/thewatergategroups/authapi:latest
 
 regCredName: regcred
 

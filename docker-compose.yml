@@ -2,7 +2,7 @@ version: "3.9"
 services:
 
   authapi: 
-    image: ghcr.io/1ndistinct/authapi
+    image: ghcr.io/thewatergategroups/authapi
     command: python -m authapi api
     depends_on:
       - dbsetup
@@ -15,7 +15,7 @@ services:
       - .env
     
   dbsetup: 
-    image: ghcr.io/1ndistinct/authapi
+    image: ghcr.io/thewatergategroups/authapi
     command: python -m authapi db upgrade
     volumes:
       - ./authapi:/app/authapi

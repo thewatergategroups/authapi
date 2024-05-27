@@ -8,7 +8,7 @@ build:
 	--build-arg="PYPI_USER=${PYPI_USER}" \
 	--build-arg="PYPI_PASS=${PYPI_PASS}" \
 	--target production \
-	-t ghcr.io/1ndistinct/$(REPOSITORY):latest \
+	-t ghcr.io/thewatergategroups/$(REPOSITORY):latest \
 	. 
 
 up: 
@@ -35,7 +35,7 @@ down:
 
 
 push: build
-	docker push ghcr.io/1ndistinct/$(REPOSITORY):latest
+	docker push ghcr.io/thewatergategroups/$(REPOSITORY):latest
 
 template:
 	if [ ! -f secret_vals.yaml ]; then echo "secrets: {}" > secret_vals.yaml; fi
