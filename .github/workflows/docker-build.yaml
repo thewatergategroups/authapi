@@ -6,7 +6,7 @@ on:
 
 jobs:
   Python:
-    uses: thewatergategroups/ops/.github/workflows/python-docker-workflow.yaml@master
+    uses: thewatergategroups/ops/.github/workflows/python-docker-workflow.yaml@main
     secrets:
       CONTAINER_PAT: ${{ secrets.CONTAINER_PAT }}
       PYPI_USER: ${{ secrets.PYPI_USER }}
