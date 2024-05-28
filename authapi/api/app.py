@@ -28,7 +28,7 @@ def create_app() -> FastAPI:
     )
     origins = [
         "null",
-        f"*.{get_settings().jwt_config.jwks_server_url.split('.',1)[1]}",
+        f"*.{get_settings().jwt_config.jwks_server_url.split('.',1)[1]}",  # allow from all subdomains
     ]
     app.add_middleware(
         CORSMiddleware,
