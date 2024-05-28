@@ -241,10 +241,12 @@ async def login(
         groups = roles
     id_token = build_user_token(data.email, alg=data.alg, groups=groups)
     response = JSONResponse({"id_token": id_token}, 200)
+    domain = get_settings().jwt_config.jwks_server_url.split(".", 1)[1]
     response.set_cookie(
         "session_id",
         session_id,
         expires=expires_at,  # secure=True, httponly=True
+        # domain=domain,
     )
     if data.redirect_url:
         response.status_code = 303
@@ -253,6 +255,7 @@ async def login(
         "id_token",
         id_token,
         expires=expires_at,  #  secure=True, httponly=True
+        # domain=domain,
     )
     return response
 
