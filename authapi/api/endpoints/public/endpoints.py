@@ -246,7 +246,7 @@ async def login(
         "session_id",
         session_id,
         expires=expires_at,  # secure=True, httponly=True
-        # domain=domain,
+        domain=domain,
     )
     if data.redirect_url:
         response.status_code = 303
@@ -255,7 +255,7 @@ async def login(
         "id_token",
         id_token,
         expires=expires_at,  #  secure=True, httponly=True
-        # domain=domain,
+        domain=domain,
     )
     return response
 
