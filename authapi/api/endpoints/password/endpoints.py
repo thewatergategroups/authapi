@@ -3,9 +3,11 @@ Endpoints to manipulate users
 Requires admin permissions
 """
 
+from typing import Annotated
 from uuid import UUID, uuid4
 
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, Header
+from fastapi.responses import JSONResponse
 from fastapi.routing import APIRouter
 from sqlalchemy import delete, exists, select, update
 from sqlalchemy.dialects.postgresql import insert
@@ -124,12 +126,14 @@ async def update_user(
 
 
 @router.get("/users")
-async def get_users(session: AsyncSession = Depends(get_async_session)):
+async def get_users(
+    session: AsyncSession = Depends(get_async_session),
+):
     """get all users"""
     users = (
         (await session.execute(select(UserModel.id_, UserModel.email))).tuples().all()
     )
-    return [dict(user_id=user[0], email=user[1]) for user in users]
+    return [dict(user_id=str(user[0]), email=user[1]) for user in users]
 
 
 @router.get("/users/user")

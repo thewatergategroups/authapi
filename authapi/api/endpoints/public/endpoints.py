@@ -156,24 +156,14 @@ async def get_login(request: Request, redirect_url: str = None, rd: str = None):
 @router.get("/session/status")
 async def get_session_status(
     session_id: Annotated[str | None, Cookie()] = None,
-    origin: Annotated[str | None, Header()] = None,
     session: AsyncSession = Depends(get_async_session),
 ):
     """Check the status of the currently active session"""
-    if origin is None:
-        origin = "null"
     try:
         await session_status(session_id, session)
-        content = dict(session_active=True)
-    except NotAuthorized:
-        content = dict(session_active=False)
-    return JSONResponse(
-        content=content,
-        headers={
-            "Access-Control-Allow-Origin": origin,
-            "Access-Control-Allow-Credentials": "true",
-        },
-    )
+        return dict(detail="success")
+    except NotAuthorized as exc:
+        raise HTTPException(status.HTTP_401_UNAUTHORIZED) from exc
 
 
 @router.post("/logout")

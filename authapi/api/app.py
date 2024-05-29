@@ -30,10 +30,7 @@ def create_app() -> FastAPI:
     )
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=[
-            "null",
-            f"*.{get_settings().jwt_config.jwks_server_url.split('.',1)[1]}",  # allow from all subdomains
-        ],
+        allow_origin_regex=r"https://.*\.thewatergategroups\.com",
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
