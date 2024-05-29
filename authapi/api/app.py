@@ -13,6 +13,8 @@ from yumi import setup_logging
 from ..settings import get_settings
 from .endpoints import oidc, password, public, scopes
 
+routers = [public.router, scopes.router, password.router, oidc.router]
+
 
 def create_app() -> FastAPI:
     """
@@ -26,20 +28,18 @@ def create_app() -> FastAPI:
         docs_url=None,
         redoc_url=None,
     )
-    origins = [
-        "null",
-        f"*.{get_settings().jwt_config.jwks_server_url.split('.',1)[1]}",  # allow from all subdomains
-    ]
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=origins,
+        allow_origins=[
+            "null",
+            f"*.{get_settings().jwt_config.jwks_server_url.split('.',1)[1]}",  # allow from all subdomains
+        ],
         allow_credentials=True,
         allow_methods=["*"],
         allow_headers=["*"],
     )
-    app.include_router(public.router)
-    app.include_router(scopes.router)
-    app.include_router(password.router)
-    app.include_router(oidc.router)
+    for router in routers:
+        app.include_router(router)
     app.mount("/static", StaticFiles(directory="static"), name="static")
+
     return app
