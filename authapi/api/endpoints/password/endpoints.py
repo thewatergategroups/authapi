@@ -162,7 +162,7 @@ async def get_roles(session: AsyncSession = Depends(get_async_session)):
         scopes = await session.scalars(
             select(RoleScopeMapModel).where(RoleScopeMapModel.role_id == role.id_)
         )
-        response.append(dict(id_=role.id_, scopes=[scope.id_ for scope in scopes]))
+        response.append(dict(id_=role.id_, scopes=[scope.scope_id for scope in scopes]))
 
     return response
 
