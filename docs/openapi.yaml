@@ -1,0 +1,1761 @@
+components:
+  schemas:
+    AddUserRoleBody:
+      description: add user request body
+      properties:
+        role_id:
+          title: Role Id
+          type: string
+        user_id:
+          title: User Id
+          type: string
+      required:
+      - role_id
+      - user_id
+      title: AddUserRoleBody
+      type: object
+    Alg:
+      description: '1. Enum defining allowed algorithms
+
+        2. some helper functions to make the algorithms accessible'
+      enum:
+      - ES256
+      - RS256
+      title: Alg
+      type: string
+    Body_get_token_token_post:
+      properties:
+        alg:
+          allOf:
+          - $ref: '#/components/schemas/Alg'
+          default: ES256
+        client_id:
+          format: uuid
+          title: Client Id
+          type: string
+        client_secret:
+          title: Client Secret
+          type: string
+        code:
+          title: Code
+          type: string
+        code_verifier:
+          title: Code Verifier
+          type: string
+        grant_type:
+          $ref: '#/components/schemas/GrantTypes'
+        redirect_uri:
+          title: Redirect Uri
+          type: string
+        refresh_token:
+          title: Refresh Token
+          type: string
+        scope:
+          title: Scope
+          type: string
+      required:
+      - grant_type
+      - redirect_uri
+      title: Body_get_token_token_post
+      type: object
+    Body_login_login_post:
+      properties:
+        alg:
+          allOf:
+          - $ref: '#/components/schemas/Alg'
+          default: ES256
+        email:
+          title: Email
+          type: string
+        password:
+          title: Password
+          type: string
+        redirect_url:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Redirect Url
+        scope:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Scope
+      required:
+      - email
+      - password
+      title: Body_login_login_post
+      type: object
+    ClientAddBody:
+      description: Add Client endpoint body
+      properties:
+        description:
+          title: Description
+          type: string
+        grant_types:
+          items:
+            $ref: '#/components/schemas/GrantTypes'
+          title: Grant Types
+          type: array
+        name:
+          title: Name
+          type: string
+        redirect_uris:
+          items:
+            type: string
+          title: Redirect Uris
+          type: array
+        roles:
+          items:
+            type: string
+          title: Roles
+          type: array
+        type:
+          $ref: '#/components/schemas/ClientType'
+      required:
+      - name
+      - type
+      - description
+      - redirect_uris
+      - grant_types
+      - roles
+      title: ClientAddBody
+      type: object
+    ClientGrantBody:
+      description: Add client grant body
+      properties:
+        client_id:
+          format: uuid
+          title: Client Id
+          type: string
+        grants:
+          items:
+            $ref: '#/components/schemas/GrantTypes'
+          title: Grants
+          type: array
+      required:
+      - client_id
+      - grants
+      title: ClientGrantBody
+      type: object
+    ClientRedirectBody:
+      description: Add client redirect body
+      properties:
+        client_id:
+          format: uuid
+          title: Client Id
+          type: string
+        redirect_uris:
+          items:
+            type: string
+          title: Redirect Uris
+          type: array
+      required:
+      - client_id
+      - redirect_uris
+      title: ClientRedirectBody
+      type: object
+    ClientScopesBody:
+      description: Add client scopes body
+      properties:
+        client_id:
+          format: uuid
+          title: Client Id
+          type: string
+        roles:
+          items:
+            type: string
+          title: Roles
+          type: array
+      required:
+      - client_id
+      - roles
+      title: ClientScopesBody
+      type: object
+    ClientType:
+      const: confidential
+      description: Allowed Client types
+      enum:
+      - confidential
+      title: ClientType
+      type: string
+    CodeChallengeMethods:
+      description: Used for Authorization code flow to ensure authorization code is
+        legit
+      enum:
+      - plain
+      - S256
+      title: CodeChallengeMethods
+      type: string
+    GrantTypes:
+      description: 'Allowed Grant Types
+
+        1. AUTHORIZATION_CODE: exchange authorization code for access token
+
+        2. IMPLICIT: returns a token directly
+
+        3. PASSWORD: exhange a users username and password for a token
+
+        4. REFRESH_TOKEN: returns a refresh token to create future tokens'
+      enum:
+      - authorization_code
+      - implicit
+      - refresh_token
+      title: GrantTypes
+      type: string
+    HTTPValidationError:
+      properties:
+        detail:
+          items:
+            $ref: '#/components/schemas/ValidationError'
+          title: Detail
+          type: array
+      title: HTTPValidationError
+      type: object
+    ResponseTypes:
+      description: 'Possible response types from the authorization server
+
+        1. TOKEN:  used with IMPLICIT grant type to return a token directly
+
+        2. CODE: returns a authorization code to get a token from the token endpoint
+
+        3. ID_TOKEN: returns a token used to identify the authorized party NOT for
+        authentication.
+
+        Used in OIDC flow'
+      enum:
+      - token
+      - code
+      - id_token
+      title: ResponseTypes
+      type: string
+    RoleAddBody:
+      description: Initial role add body
+      properties:
+        role_id:
+          title: Role Id
+          type: string
+        scopes:
+          items:
+            type: string
+          title: Scopes
+          type: array
+      required:
+      - role_id
+      - scopes
+      title: RoleAddBody
+      type: object
+    RoleScopesBody:
+      description: Add user scope request body
+      properties:
+        role_id:
+          title: Role Id
+          type: string
+        scope_id:
+          title: Scope Id
+          type: string
+      required:
+      - role_id
+      - scope_id
+      title: RoleScopesBody
+      type: object
+    ScopeBody:
+      description: Add scope request body
+      properties:
+        scope:
+          title: Scope
+          type: string
+      required:
+      - scope
+      title: ScopeBody
+      type: object
+    UserAddBody:
+      description: add user request body
+      properties:
+        alg:
+          allOf:
+          - $ref: '#/components/schemas/Alg'
+          default: ES256
+        dob:
+          format: date
+          title: Dob
+          type: string
+        email:
+          title: Email
+          type: string
+        first_name:
+          title: First Name
+          type: string
+        password:
+          title: Password
+          type: string
+        postcode:
+          title: Postcode
+          type: string
+        surname:
+          title: Surname
+          type: string
+      required:
+      - email
+      - password
+      - dob
+      - postcode
+      - first_name
+      - surname
+      title: UserAddBody
+      type: object
+    UserUpdateBody:
+      description: Update user request body
+      properties:
+        dob:
+          anyOf:
+          - format: date
+            type: string
+          - type: 'null'
+          title: Dob
+        email:
+          title: Email
+          type: string
+        first_name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: First Name
+        new_email:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: New Email
+        password:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Password
+        postcode:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Postcode
+        surname:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Surname
+      required:
+      - email
+      title: UserUpdateBody
+      type: object
+    ValidationError:
+      properties:
+        loc:
+          items:
+            anyOf:
+            - type: string
+            - type: integer
+          title: Location
+          type: array
+        msg:
+          title: Message
+          type: string
+        type:
+          title: Error Type
+          type: string
+      required:
+      - loc
+      - msg
+      - type
+      title: ValidationError
+      type: object
+  securitySchemes:
+    HTTPBearer:
+      scheme: bearer
+      type: http
+info:
+  description: Jwks Authentication API
+  title: Auth Api
+  version: '1.0'
+openapi: 3.1.0
+paths:
+  /.well-known/openid-configuration:
+    get:
+      description: 'Endpoint to return the OIDC configuration for
+
+        third party applications to use this service as an IDP'
+      operationId: get_well_known_open_id__well_known_openid_configuration_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+      summary: Get Well Known Open Id
+      tags:
+      - public
+  /clients:
+    get:
+      description: Get existing clients
+      operationId: get_clients_clients_get
+      parameters:
+      - in: header
+        name: user-agent
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User-Agent
+      - in: cookie
+        name: session_id
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Session Id
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Clients
+      tags:
+      - clients
+  /clients/add:
+    post:
+      description: Create a new client
+      operationId: create_client_clients_add_post
+      parameters:
+      - in: header
+        name: user-agent
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User-Agent
+      - in: cookie
+        name: session_id
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Session Id
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientAddBody'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Create Client
+      tags:
+      - clients
+  /clients/client:
+    get:
+      description: get specific client information
+      operationId: get_client_clients_client_get
+      parameters:
+      - in: query
+        name: client_id
+        required: true
+        schema:
+          format: uuid
+          title: Client Id
+          type: string
+      - in: header
+        name: user-agent
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User-Agent
+      - in: cookie
+        name: session_id
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Session Id
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Client
+      tags:
+      - clients
+  /clients/grants:
+    delete:
+      description: delete client grants
+      operationId: delete_client_grants_clients_grants_delete
+      parameters:
+      - in: header
+        name: user-agent
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User-Agent
+      - in: cookie
+        name: session_id
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Session Id
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientGrantBody'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Delete Client Grants
+      tags:
+      - clients
+    get:
+      description: get client grants
+      operationId: get_client_grants_clients_grants_get
+      parameters:
+      - in: query
+        name: client_id
+        required: true
+        schema:
+          format: uuid
+          title: Client Id
+          type: string
+      - in: header
+        name: user-agent
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User-Agent
+      - in: cookie
+        name: session_id
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Session Id
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Client Grants
+      tags:
+      - clients
+    post:
+      description: add client grants
+      operationId: add_client_grants_clients_grants_post
+      parameters:
+      - in: header
+        name: user-agent
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User-Agent
+      - in: cookie
+        name: session_id
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Session Id
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientGrantBody'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Add Client Grants
+      tags:
+      - clients
+  /clients/redirect:
+    delete:
+      description: delete client redirects
+      operationId: delete_client_redirects_clients_redirect_delete
+      parameters:
+      - in: header
+        name: user-agent
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User-Agent
+      - in: cookie
+        name: session_id
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Session Id
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientRedirectBody'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Delete Client Redirects
+      tags:
+      - clients
+    post:
+      description: add client redirects
+      operationId: add_client_redirects_clients_redirect_post
+      parameters:
+      - in: header
+        name: user-agent
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User-Agent
+      - in: cookie
+        name: session_id
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Session Id
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientRedirectBody'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Add Client Redirects
+      tags:
+      - clients
+  /clients/redirects:
+    get:
+      description: get client redirects
+      operationId: get_client_redirects_clients_redirects_get
+      parameters:
+      - in: query
+        name: client_id
+        required: true
+        schema:
+          format: uuid
+          title: Client Id
+          type: string
+      - in: header
+        name: user-agent
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User-Agent
+      - in: cookie
+        name: session_id
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Session Id
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Client Redirects
+      tags:
+      - clients
+  /clients/roles:
+    delete:
+      description: delete client scopes
+      operationId: delete_client_scopes_clients_roles_delete
+      parameters:
+      - in: header
+        name: user-agent
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User-Agent
+      - in: cookie
+        name: session_id
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Session Id
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientScopesBody'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Delete Client Scopes
+      tags:
+      - clients
+    get:
+      description: get client scopes
+      operationId: get_client_scopes_clients_roles_get
+      parameters:
+      - in: query
+        name: client_id
+        required: true
+        schema:
+          format: uuid
+          title: Client Id
+          type: string
+      - in: header
+        name: user-agent
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User-Agent
+      - in: cookie
+        name: session_id
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Session Id
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Client Scopes
+      tags:
+      - clients
+    post:
+      description: add client scopes
+      operationId: add_client_role_clients_roles_post
+      parameters:
+      - in: header
+        name: user-agent
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User-Agent
+      - in: cookie
+        name: session_id
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Session Id
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientScopesBody'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Add Client Role
+      tags:
+      - clients
+  /iframe-js:
+    get:
+      description: Get session checking javascript to be run the in the browser
+      operationId: iframe_js_iframe_js_get
+      responses:
+        '200':
+          description: Successful Response
+      summary: Iframe Js
+      tags:
+      - public
+  /keys:
+    get:
+      description: 'Returns avaliable public keys
+
+        No Authentication required'
+      operationId: get_jwks_keys_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+      summary: Get Jwks
+      tags:
+      - public
+  /login:
+    get:
+      description: Serve login page
+      operationId: get_login_login_get
+      parameters:
+      - in: query
+        name: redirect_url
+        required: false
+        schema:
+          title: Redirect Url
+          type: string
+      - in: query
+        name: rd
+        required: false
+        schema:
+          title: Rd
+          type: string
+      responses:
+        '200':
+          content:
+            text/html:
+              schema:
+                type: string
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Login
+      tags:
+      - public
+    post:
+      description: Returns a user token for a user who authenticated with a username
+        and password
+      operationId: login_login_post
+      parameters:
+      - in: header
+        name: user-agent
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User-Agent
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Body_login_login_post'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Login
+      tags:
+      - public
+  /logout:
+    post:
+      description: Log out of the application
+      operationId: logout_logout_post
+      parameters:
+      - in: header
+        name: user-agent
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User-Agent
+      - in: cookie
+        name: session_id
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Session Id
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Logout
+      tags:
+      - public
+  /oauth2/authorize:
+    get:
+      description: 'Authorization endpoint for OIDC and oAuth flows.
+
+        Authenticated with a User token'
+      operationId: authorize_oidc_request_oauth2_authorize_get
+      parameters:
+      - in: query
+        name: response_type
+        required: true
+        schema:
+          $ref: '#/components/schemas/ResponseTypes'
+      - in: query
+        name: client_id
+        required: true
+        schema:
+          format: uuid
+          title: Client Id
+          type: string
+      - in: query
+        name: redirect_uri
+        required: true
+        schema:
+          title: Redirect Uri
+          type: string
+      - in: query
+        name: state
+        required: true
+        schema:
+          title: State
+          type: string
+      - in: query
+        name: scope
+        required: true
+        schema:
+          title: Scope
+          type: string
+      - in: query
+        name: code_challenge
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Code Challenge
+      - in: query
+        name: code_challenge_method
+        required: false
+        schema:
+          anyOf:
+          - $ref: '#/components/schemas/CodeChallengeMethods'
+          - type: 'null'
+          title: Code Challenge Method
+      - in: query
+        name: nonce
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Nonce
+      - in: query
+        name: alg
+        required: false
+        schema:
+          allOf:
+          - $ref: '#/components/schemas/Alg'
+          default: ES256
+          title: Alg
+      - in: header
+        name: user-agent
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User-Agent
+      - in: cookie
+        name: session_id
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Session Id
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Authorize Oidc Request
+      tags:
+      - public
+  /roles:
+    get:
+      description: get roles
+      operationId: get_roles_roles_get
+      parameters:
+      - in: header
+        name: user-agent
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User-Agent
+      - in: cookie
+        name: session_id
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Session Id
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Roles
+      tags:
+      - users
+  /roles/role:
+    delete:
+      description: delete roles
+      operationId: delete_role_roles_role_delete
+      parameters:
+      - in: query
+        name: role_id
+        required: true
+        schema:
+          title: Role Id
+          type: string
+      - in: header
+        name: user-agent
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User-Agent
+      - in: cookie
+        name: session_id
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Session Id
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Delete Role
+      tags:
+      - users
+    post:
+      description: Add role with scopes
+      operationId: add_role_roles_role_post
+      parameters:
+      - in: header
+        name: user-agent
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User-Agent
+      - in: cookie
+        name: session_id
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Session Id
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleAddBody'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Add Role
+      tags:
+      - users
+  /roles/role/scopes:
+    delete:
+      description: get user scopes
+      operationId: get_role_scope_roles_role_scopes_delete
+      parameters:
+      - in: query
+        name: role_id
+        required: true
+        schema:
+          title: Role Id
+          type: string
+      - in: query
+        name: scope_id
+        required: true
+        schema:
+          title: Scope Id
+          type: string
+      - in: header
+        name: user-agent
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User-Agent
+      - in: cookie
+        name: session_id
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Session Id
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Role Scope
+      tags:
+      - users
+    get:
+      description: get user scopes
+      operationId: get_role_scopes_roles_role_scopes_get
+      parameters:
+      - in: query
+        name: role_id
+        required: true
+        schema:
+          title: Role Id
+          type: string
+      - in: header
+        name: user-agent
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User-Agent
+      - in: cookie
+        name: session_id
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Session Id
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Role Scopes
+      tags:
+      - users
+    post:
+      description: add role scopes
+      operationId: add_role_scopes_roles_role_scopes_post
+      parameters:
+      - in: header
+        name: user-agent
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User-Agent
+      - in: cookie
+        name: session_id
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Session Id
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleScopesBody'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Add Role Scopes
+      tags:
+      - users
+  /scopes:
+    get:
+      description: get existing scopes
+      operationId: get_scopes_scopes_get
+      parameters:
+      - in: header
+        name: user-agent
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User-Agent
+      - in: cookie
+        name: session_id
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Session Id
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Scopes
+      tags:
+      - scopes
+  /scopes/add:
+    post:
+      description: Add new scope if it doesnt exist
+      operationId: add_scope_scopes_add_post
+      parameters:
+      - in: header
+        name: user-agent
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User-Agent
+      - in: cookie
+        name: session_id
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Session Id
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ScopeBody'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Add Scope
+      tags:
+      - scopes
+  /session/status:
+    get:
+      description: Check the status of the currently active session
+      operationId: get_session_status_session_status_get
+      parameters:
+      - in: cookie
+        name: session_id
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Session Id
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Session Status
+      tags:
+      - public
+  /token:
+    post:
+      description: 'Get client token
+
+        Authenticated with a Client ID and Client Secret'
+      operationId: get_token_token_post
+      parameters:
+      - in: header
+        name: authorization
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Authorization
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Body_get_token_token_post'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Token
+      tags:
+      - public
+  /userinfo:
+    get:
+      description: Return user identity from client
+      operationId: get_userinfo_userinfo_get
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+      security:
+      - HTTPBearer: []
+      summary: Get Userinfo
+      tags:
+      - public
+  /users:
+    get:
+      description: get all users
+      operationId: get_users_users_get
+      parameters:
+      - in: header
+        name: user-agent
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User-Agent
+      - in: cookie
+        name: session_id
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Session Id
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Users
+      tags:
+      - users
+  /users/me:
+    get:
+      description: Get user information
+      operationId: get_me_users_me_get
+      parameters:
+      - in: header
+        name: user-agent
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User-Agent
+      - in: cookie
+        name: session_id
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Session Id
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Me
+      tags:
+      - users
+  /users/user:
+    delete:
+      description: delete a user
+      operationId: delete_user_users_user_delete
+      parameters:
+      - in: query
+        name: user_email
+        required: true
+        schema:
+          title: User Email
+          type: string
+      - in: header
+        name: user-agent
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User-Agent
+      - in: cookie
+        name: session_id
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Session Id
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Delete User
+      tags:
+      - users
+    patch:
+      description: update user endpoint
+      operationId: update_user_users_user_patch
+      parameters:
+      - in: header
+        name: user-agent
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User-Agent
+      - in: cookie
+        name: session_id
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Session Id
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserUpdateBody'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Update User
+      tags:
+      - users
+    post:
+      description: create new user endpoint. stores a hash of the password
+      operationId: create_user_users_user_post
+      parameters:
+      - in: header
+        name: user-agent
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User-Agent
+      - in: cookie
+        name: session_id
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Session Id
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UserAddBody'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Create User
+      tags:
+      - users
+  /users/user/roles:
+    post:
+      description: create new user endpoint. stores a hash of the password
+      operationId: add_user_role_users_user_roles_post
+      parameters:
+      - in: header
+        name: user-agent
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User-Agent
+      - in: cookie
+        name: session_id
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Session Id
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/AddUserRoleBody'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Add User Role
+      tags:
+      - users

@@ -5,7 +5,7 @@ Requires admin permissions
 
 from uuid import UUID, uuid4
 
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, status
 from fastapi.routing import APIRouter
 from sqlalchemy import delete, exists, select, update
 from sqlalchemy.dialects.postgresql import insert
@@ -36,86 +36,82 @@ router = APIRouter(
 )
 
 
-@router.post("/users/add")
+@router.post("/users/user")
 async def create_user(
     data: UserAddBody,
     session: AsyncSession = Depends(get_async_session),
 ):
     """create new user endpoint. stores a hash of the password"""
-    passwd = blake2b_hash(data.password)
     us_exists = await session.scalar(
-        select(exists(UserModel)).where(UserModel.email == data.email)
+        select(exists(UserModel)).where(UserModel.email == data.email.strip())
     )
     if us_exists:
         raise HTTPException(400, "User already Exists")
 
+    passwd = blake2b_hash(data.password.strip())
     await session.execute(
         insert(UserModel).values(
             id_=uuid4(),
-            email=data.email,
+            email=data.email.strip(),
             pwd_hash=passwd,
-            first_name=data.first_name,
-            surname=data.surname,
+            first_name=data.first_name.strip(),
+            surname=data.surname.strip(),
             dob=data.dob,
-            postcode=data.postcode,
+            postcode=data.postcode.strip(),
         )
     )
 
-    return {"detail": "success"}
+    return dict(detail="success")
 
 
-@router.post("/users/user/roles")
-async def add_user_role(
-    data: AddUserRoleBody,
-    session: AsyncSession = Depends(get_async_session),
-):
-    """create new user endpoint. stores a hash of the password"""
-
-    await session.execute(
-        insert(UserRoleMapModel)
-        .values(user_id=data.user_id, role_id=data.role_id)
-        .on_conflict_do_nothing()
-    )
-
-    return {"detail": "success"}
-
-
-async def get_user_roles(user_id: UUID, session: AsyncSession):
-    """Get User roles"""
-    return (
-        await session.scalars(
-            select(UserRoleMapModel.role_id).where(UserRoleMapModel.user_id == user_id)
-        )
-    ).all()
-
-
-@router.patch("/users/update")
+@router.patch("/users/user")
 async def update_user(
     data: UserUpdateBody,
     session: AsyncSession = Depends(get_async_session),
 ):
     """update user endpoint"""
-    passwd = blake2b_hash(data.password)
     us_exists = await session.scalar(
-        select(exists(UserModel)).where(UserModel.email == data.email)
+        select(exists(UserModel)).where(UserModel.email == data.email.strip())
     )
     if not us_exists:
-        raise HTTPException(400, "User already Exists")
-
+        raise HTTPException(400, "User doesn't Exists")
+    values = dict()
+    if data.password is not None:
+        values["pwd_hash"] = blake2b_hash(data.password.strip())
+    if data.new_email is not None:
+        values["email"] = data.new_email.strip()
+    if data.first_name is not None:
+        values["first_name"] = data.first_name.strip()
+    if data.surname is not None:
+        values["surname"] = data.surname.strip()
+    if data.dob is not None:
+        values["dob"] = data.dob
+    if data.postcode is not None:
+        values["postcode"] = data.postcode.strip()
+    if not values:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "no fields to update")
     await session.execute(
-        update(UserModel)
-        .where(UserModel.email == data.email)
-        .values(
-            pwd_hash=passwd,
-            email=data.email,
-            first_name=data.first_name,
-            surname=data.surname,
-            dob=data.dob,
-            postcode=data.postcode,
-        )
+        update(UserModel).where(UserModel.email == data.email.strip()).values(**values)
     )
 
-    return {"detail": "success"}
+    return dict(detail="success")
+
+
+@router.delete("/users/user")
+async def delete_user(
+    user_email: str,
+    session: AsyncSession = Depends(get_async_session),
+):
+    """delete a user"""
+    us_exists = await session.scalar(
+        select(exists(UserModel)).where(UserModel.email == user_email.strip())
+    )
+    if not us_exists:
+        raise HTTPException(400, "User doesn't Exists")
+    await session.execute(
+        delete(UserModel).where(UserModel.email == user_email.strip())
+    )
+    return dict(detail="success")
 
 
 @router.get("/users")
@@ -135,8 +131,8 @@ async def get_users(
     return response
 
 
-@router.get("/users/user")
-async def get_user(
+@router.get("/users/me")
+async def get_me(
     session: AsyncSession = Depends(get_async_session),
     user_info: UserInfo = Depends(session_has_admin_scope()),
 ):
@@ -151,6 +147,31 @@ async def get_user(
         **user.as_dict(included_keys=user.get_all_keys(["pwd_hash", "id_"])),
         "roles": roles,
     }
+
+
+@router.post("/users/user/roles")
+async def add_user_role(
+    data: AddUserRoleBody,
+    session: AsyncSession = Depends(get_async_session),
+):
+    """create new user endpoint. stores a hash of the password"""
+
+    await session.execute(
+        insert(UserRoleMapModel)
+        .values(user_id=data.user_id.strip(), role_id=data.role_id.strip())
+        .on_conflict_do_nothing()
+    )
+
+    return dict(detail="success")
+
+
+async def get_user_roles(user_id: UUID, session: AsyncSession):
+    """Get User roles"""
+    return (
+        await session.scalars(
+            select(UserRoleMapModel.role_id).where(UserRoleMapModel.user_id == user_id)
+        )
+    ).all()
 
 
 @router.get("/roles")
@@ -174,7 +195,7 @@ async def delete_role(role_id: str, session: AsyncSession = Depends(get_async_se
     return dict(detail="success")
 
 
-@router.post("/roles/add")
+@router.post("/roles/role")
 async def add_role(
     body: RoleAddBody,
     session: AsyncSession = Depends(get_async_session),
@@ -187,10 +208,10 @@ async def add_role(
         .on_conflict_do_nothing()
     )
     await session.execute(stmt)
-    return {"detail": "success"}
+    return dict(detail="success")
 
 
-@router.post("/roles/scopes")
+@router.post("/roles/role/scopes")
 async def add_role_scopes(
     data: RoleScopesBody,
     session: AsyncSession = Depends(get_async_session),
@@ -202,7 +223,7 @@ async def add_role_scopes(
     return dict(detail="success")
 
 
-@router.get("/roles/scopes")
+@router.get("/roles/role/scopes")
 async def get_role_scopes(
     role_id: str,
     session: AsyncSession = Depends(get_async_session),
@@ -218,7 +239,7 @@ async def get_role_scopes(
     return scopes
 
 
-@router.delete("/roles/scopes")
+@router.delete("/roles/role/scopes")
 async def get_role_scope(
     role_id: str,
     scope_id: str,
@@ -231,4 +252,4 @@ async def get_role_scope(
             RoleScopeMapModel.scope_id == scope_id,
         )
     )
-    return {"detail": "success"}
+    return dict(detail="success")

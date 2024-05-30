@@ -2,7 +2,7 @@
 User Endpoint Schemas
 """
 
-from datetime import datetime
+from datetime import date
 
 from pydantic import BaseModel
 
@@ -27,16 +27,23 @@ class UserUpdateBody(BaseModel):
     """Update user request body"""
 
     email: str
+    new_email: str | None = None
+    password: str | None = None
+    dob: date | None = None
+    postcode: str | None = None
+    first_name: str | None = None
+    surname: str | None = None
+
+
+class UserAddBody(BaseModel):
+    """add user request body"""
+
+    email: str
     password: str
-    dob: datetime
+    dob: date
     postcode: str
     first_name: str
     surname: str
-
-
-class UserAddBody(UserUpdateBody):
-    """add user request body"""
-
     alg: Alg = Alg.EC
 
 

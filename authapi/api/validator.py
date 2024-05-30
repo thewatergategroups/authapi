@@ -58,7 +58,10 @@ async def validate_session(
             logging.error("user agent doesn't match")
             logging.debug("%s != %s", session_model.user_agent, user_agent)
             raise NotAuthorized("User agent doesn't match")
-        if session_model.ip_address != request.client.host:
+        if (
+            session_model.ip_address != request.client.host
+            and get_settings().location_security
+        ):
             logging.error("client location changed")
             logging.debug("%s != %s", session_model.ip_address, request.client.host)
             raise NotAuthorized("client location changed")

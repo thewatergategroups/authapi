@@ -15,6 +15,7 @@ class Settings(BaseSettings):
 
     salt: str = ""
     admin_password: str = ""
+    location_security: bool = True
     db_settings: DbSettings = DbSettings(
         env_script_location=f"{pathlib.Path(__file__).parent.resolve()}/database/alembic"
     )
