@@ -156,7 +156,15 @@ async def get_user(
 @router.get("/roles")
 async def get_roles(session: AsyncSession = Depends(get_async_session)):
     """get roles"""
-    return (await session.scalars(select(RoleModel))).all()
+    response = list()
+    roles = (await session.scalars(select(RoleModel))).all()
+    for role in roles:
+        scopes = await session.scalars(
+            select(RoleScopeMapModel).where(RoleScopeMapModel.role_id == role.id_)
+        )
+        response.append(dict(id_=role.id_, scopes=[scope.id_ for scope in scopes]))
+
+    return response
 
 
 @router.delete("/roles/role")
