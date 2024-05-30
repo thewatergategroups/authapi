@@ -3,11 +3,9 @@ Endpoints to manipulate users
 Requires admin permissions
 """
 
-from typing import Annotated
 from uuid import UUID, uuid4
 
-from fastapi import Depends, HTTPException, Header
-from fastapi.responses import JSONResponse
+from fastapi import Depends, HTTPException
 from fastapi.routing import APIRouter
 from sqlalchemy import delete, exists, select, update
 from sqlalchemy.dialects.postgresql import insert
@@ -82,13 +80,8 @@ async def add_user_role(
     return {"detail": "success"}
 
 
-@router.get("/users/user/roles")
-async def get_user_roles(
-    user_id: UUID,
-    session: AsyncSession = Depends(get_async_session),
-):
-    """create new user endpoint. stores a hash of the password"""
-
+async def get_user_roles(user_id: UUID, session: AsyncSession):
+    """Get User roles"""
     return (
         await session.scalars(
             select(UserRoleMapModel.role_id).where(UserRoleMapModel.user_id == user_id)
@@ -160,7 +153,20 @@ async def get_user(
     }
 
 
-@router.get("/roles/add")
+@router.get("/roles")
+async def get_roles(session: AsyncSession = Depends(get_async_session)):
+    """get roles"""
+    return (await session.scalars(select(RoleModel))).all()
+
+
+@router.delete("/roles/role")
+async def delete_role(role_id: str, session: AsyncSession = Depends(get_async_session)):
+    """delete roles"""
+    await session.execute(delete(RoleModel).where(RoleModel.id_ == role_id))
+    return dict(detail="success")
+
+
+@router.post("/roles/add")
 async def add_role(
     body: RoleAddBody,
     session: AsyncSession = Depends(get_async_session),
@@ -185,7 +191,7 @@ async def add_role_scopes(
     await session.execute(
         insert(RoleScopeMapModel).values(scope_id=data.scope_id, role_id=data.role_id)
     )
-    return {"detail": "success"}
+    return dict(detail="success")
 
 
 @router.get("/roles/scopes")
