@@ -39,5 +39,5 @@ async def add_scope(
 @router.get("")
 async def get_scopes(session: AsyncSession = Depends(get_async_session)):
     """get existing scopes"""
-    scopes = (await session.scalars(select(ScopesModel.id_))).all()
+    scopes = (await session.scalars(select(ScopesModel))).all()
     return scopes
