@@ -130,10 +130,16 @@ async def get_users(
     session: AsyncSession = Depends(get_async_session),
 ):
     """get all users"""
-    users = (
-        (await session.execute(select(UserModel.id_, UserModel.email))).tuples().all()
-    )
-    return [dict(user_id=str(user[0]), email=user[1]) for user in users]
+    users = (await session.scalars(select(UserModel))).all()
+    response = list()
+    for user in users:
+        response.append(
+            {
+                **user.as_dict(included_keys=user.get_all_keys(["pwd_hash"])),
+                "roles": await get_user_roles(user.id_, session),
+            }
+        )
+    return response
 
 
 @router.get("/users/user")
