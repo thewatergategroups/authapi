@@ -389,7 +389,7 @@ paths:
           description: Successful Response
       summary: Get Well Known Open Id
       tags:
-      - public
+      - OAuth2 Public
   /clients:
     get:
       description: Get existing clients
@@ -425,49 +425,7 @@ paths:
           description: Validation Error
       summary: Get Clients
       tags:
-      - clients
-  /clients/add:
-    post:
-      description: Create a new client
-      operationId: create_client_clients_add_post
-      parameters:
-      - in: header
-        name: user-agent
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: User-Agent
-      - in: cookie
-        name: session_id
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Session Id
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: '#/components/schemas/ClientAddBody'
-        required: true
-      responses:
-        '200':
-          content:
-            application/json:
-              schema: {}
-          description: Successful Response
-        '422':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-          description: Validation Error
-      summary: Create Client
-      tags:
-      - clients
+      - Clients Authenticated
   /clients/client:
     get:
       description: get specific client information
@@ -510,11 +468,52 @@ paths:
           description: Validation Error
       summary: Get Client
       tags:
-      - clients
-  /clients/grants:
+      - Clients Authenticated
+    post:
+      description: Create a new client
+      operationId: create_client_clients_client_post
+      parameters:
+      - in: header
+        name: user-agent
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User-Agent
+      - in: cookie
+        name: session_id
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Session Id
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientAddBody'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Create Client
+      tags:
+      - Clients Authenticated
+  /clients/client/grants:
     delete:
       description: delete client grants
-      operationId: delete_client_grants_clients_grants_delete
+      operationId: delete_client_grants_clients_client_grants_delete
       parameters:
       - in: header
         name: user-agent
@@ -552,52 +551,10 @@ paths:
           description: Validation Error
       summary: Delete Client Grants
       tags:
-      - clients
-    get:
-      description: get client grants
-      operationId: get_client_grants_clients_grants_get
-      parameters:
-      - in: query
-        name: client_id
-        required: true
-        schema:
-          format: uuid
-          title: Client Id
-          type: string
-      - in: header
-        name: user-agent
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: User-Agent
-      - in: cookie
-        name: session_id
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Session Id
-      responses:
-        '200':
-          content:
-            application/json:
-              schema: {}
-          description: Successful Response
-        '422':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-          description: Validation Error
-      summary: Get Client Grants
-      tags:
-      - clients
+      - Clients Authenticated
     post:
       description: add client grants
-      operationId: add_client_grants_clients_grants_post
+      operationId: add_client_grants_clients_client_grants_post
       parameters:
       - in: header
         name: user-agent
@@ -635,11 +592,11 @@ paths:
           description: Validation Error
       summary: Add Client Grants
       tags:
-      - clients
-  /clients/redirect:
+      - Clients Authenticated
+  /clients/client/redirect:
     delete:
       description: delete client redirects
-      operationId: delete_client_redirects_clients_redirect_delete
+      operationId: delete_client_redirects_clients_client_redirect_delete
       parameters:
       - in: header
         name: user-agent
@@ -677,10 +634,10 @@ paths:
           description: Validation Error
       summary: Delete Client Redirects
       tags:
-      - clients
+      - Clients Authenticated
     post:
       description: add client redirects
-      operationId: add_client_redirects_clients_redirect_post
+      operationId: add_client_redirects_clients_client_redirect_post
       parameters:
       - in: header
         name: user-agent
@@ -718,11 +675,11 @@ paths:
           description: Validation Error
       summary: Add Client Redirects
       tags:
-      - clients
-  /clients/redirects:
+      - Clients Authenticated
+  /clients/client/redirects:
     get:
       description: get client redirects
-      operationId: get_client_redirects_clients_redirects_get
+      operationId: get_client_redirects_clients_client_redirects_get
       parameters:
       - in: query
         name: client_id
@@ -761,11 +718,11 @@ paths:
           description: Validation Error
       summary: Get Client Redirects
       tags:
-      - clients
-  /clients/roles:
+      - Clients Authenticated
+  /clients/client/role:
     delete:
       description: delete client scopes
-      operationId: delete_client_scopes_clients_roles_delete
+      operationId: delete_client_roles_clients_client_role_delete
       parameters:
       - in: header
         name: user-agent
@@ -801,54 +758,12 @@ paths:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
           description: Validation Error
-      summary: Delete Client Scopes
+      summary: Delete Client Roles
       tags:
-      - clients
-    get:
-      description: get client scopes
-      operationId: get_client_scopes_clients_roles_get
-      parameters:
-      - in: query
-        name: client_id
-        required: true
-        schema:
-          format: uuid
-          title: Client Id
-          type: string
-      - in: header
-        name: user-agent
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: User-Agent
-      - in: cookie
-        name: session_id
-        required: false
-        schema:
-          anyOf:
-          - type: string
-          - type: 'null'
-          title: Session Id
-      responses:
-        '200':
-          content:
-            application/json:
-              schema: {}
-          description: Successful Response
-        '422':
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/HTTPValidationError'
-          description: Validation Error
-      summary: Get Client Scopes
-      tags:
-      - clients
+      - Clients Authenticated
     post:
-      description: add client scopes
-      operationId: add_client_role_clients_roles_post
+      description: add client roles
+      operationId: add_client_role_clients_client_role_post
       parameters:
       - in: header
         name: user-agent
@@ -886,7 +801,93 @@ paths:
           description: Validation Error
       summary: Add Client Role
       tags:
-      - clients
+      - Clients Authenticated
+  /clients/client/roles:
+    get:
+      description: get client roles
+      operationId: get_client_roles_clients_client_roles_get
+      parameters:
+      - in: query
+        name: client_id
+        required: true
+        schema:
+          format: uuid
+          title: Client Id
+          type: string
+      - in: header
+        name: user-agent
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User-Agent
+      - in: cookie
+        name: session_id
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Session Id
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Client Roles
+      tags:
+      - Clients Authenticated
+  /clientsclient/grants:
+    get:
+      description: get client grants
+      operationId: get_client_grants_clientsclient_grants_get
+      parameters:
+      - in: query
+        name: client_id
+        required: true
+        schema:
+          format: uuid
+          title: Client Id
+          type: string
+      - in: header
+        name: user-agent
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User-Agent
+      - in: cookie
+        name: session_id
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Session Id
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Client Grants
+      tags:
+      - Clients Authenticated
   /iframe-js:
     get:
       description: Get session checking javascript to be run the in the browser
@@ -896,7 +897,7 @@ paths:
           description: Successful Response
       summary: Iframe Js
       tags:
-      - public
+      - Users Public
   /keys:
     get:
       description: 'Returns avaliable public keys
@@ -911,7 +912,7 @@ paths:
           description: Successful Response
       summary: Get Jwks
       tags:
-      - public
+      - General Public
   /login:
     get:
       description: Serve login page
@@ -944,7 +945,7 @@ paths:
           description: Validation Error
       summary: Get Login
       tags:
-      - public
+      - Users Public
     post:
       description: Returns a user token for a user who authenticated with a username
         and password
@@ -978,7 +979,7 @@ paths:
           description: Validation Error
       summary: Login
       tags:
-      - public
+      - Users Public
   /logout:
     post:
       description: Log out of the application
@@ -1014,7 +1015,7 @@ paths:
           description: Validation Error
       summary: Logout
       tags:
-      - public
+      - Users Public
   /oauth2/authorize:
     get:
       description: 'Authorization endpoint for OIDC and oAuth flows.
@@ -1114,7 +1115,7 @@ paths:
           description: Validation Error
       summary: Authorize Oidc Request
       tags:
-      - public
+      - OAuth2 Public
   /roles:
     get:
       description: get roles
@@ -1150,7 +1151,7 @@ paths:
           description: Validation Error
       summary: Get Roles
       tags:
-      - users
+      - Roles Authenticated
   /roles/role:
     delete:
       description: delete roles
@@ -1192,7 +1193,7 @@ paths:
           description: Validation Error
       summary: Delete Role
       tags:
-      - users
+      - Roles Authenticated
     post:
       description: Add role with scopes
       operationId: add_role_roles_role_post
@@ -1233,11 +1234,11 @@ paths:
           description: Validation Error
       summary: Add Role
       tags:
-      - users
+      - Roles Authenticated
   /roles/role/scopes:
     delete:
       description: get user scopes
-      operationId: get_role_scope_roles_role_scopes_delete
+      operationId: delete_role_scope_roles_role_scopes_delete
       parameters:
       - in: query
         name: role_id
@@ -1279,9 +1280,9 @@ paths:
               schema:
                 $ref: '#/components/schemas/HTTPValidationError'
           description: Validation Error
-      summary: Get Role Scope
+      summary: Delete Role Scope
       tags:
-      - users
+      - Roles Authenticated
     get:
       description: get user scopes
       operationId: get_role_scopes_roles_role_scopes_get
@@ -1322,7 +1323,7 @@ paths:
           description: Validation Error
       summary: Get Role Scopes
       tags:
-      - users
+      - Roles Authenticated
     post:
       description: add role scopes
       operationId: add_role_scopes_roles_role_scopes_post
@@ -1363,7 +1364,7 @@ paths:
           description: Validation Error
       summary: Add Role Scopes
       tags:
-      - users
+      - Roles Authenticated
   /scopes:
     get:
       description: get existing scopes
@@ -1399,11 +1400,11 @@ paths:
           description: Validation Error
       summary: Get Scopes
       tags:
-      - scopes
-  /scopes/add:
+      - Scopes Authenticated
+  /scopes/scope:
     post:
       description: Add new scope if it doesnt exist
-      operationId: add_scope_scopes_add_post
+      operationId: add_scope_scopes_scope_post
       parameters:
       - in: header
         name: user-agent
@@ -1441,7 +1442,7 @@ paths:
           description: Validation Error
       summary: Add Scope
       tags:
-      - scopes
+      - Scopes Authenticated
   /session/status:
     get:
       description: Check the status of the currently active session
@@ -1469,7 +1470,7 @@ paths:
           description: Validation Error
       summary: Get Session Status
       tags:
-      - public
+      - Users Public
   /token:
     post:
       description: 'Get client token
@@ -1505,7 +1506,7 @@ paths:
           description: Validation Error
       summary: Get Token
       tags:
-      - public
+      - OAuth2 Public
   /userinfo:
     get:
       description: Return user identity from client
@@ -1520,7 +1521,7 @@ paths:
       - HTTPBearer: []
       summary: Get Userinfo
       tags:
-      - public
+      - OAuth2 Public
   /users:
     get:
       description: get all users
@@ -1556,7 +1557,7 @@ paths:
           description: Validation Error
       summary: Get Users
       tags:
-      - users
+      - Users Authenticated
   /users/me:
     get:
       description: Get user information
@@ -1592,7 +1593,7 @@ paths:
           description: Validation Error
       summary: Get Me
       tags:
-      - users
+      - Users Authenticated
   /users/user:
     delete:
       description: delete a user
@@ -1634,7 +1635,7 @@ paths:
           description: Validation Error
       summary: Delete User
       tags:
-      - users
+      - Users Authenticated
     patch:
       description: update user endpoint
       operationId: update_user_users_user_patch
@@ -1675,7 +1676,7 @@ paths:
           description: Validation Error
       summary: Update User
       tags:
-      - users
+      - Users Authenticated
     post:
       description: create new user endpoint. stores a hash of the password
       operationId: create_user_users_user_post
@@ -1716,7 +1717,7 @@ paths:
           description: Validation Error
       summary: Create User
       tags:
-      - users
+      - Users Authenticated
   /users/user/roles:
     post:
       description: create new user endpoint. stores a hash of the password
@@ -1758,4 +1759,4 @@ paths:
           description: Validation Error
       summary: Add User Role
       tags:
-      - users
+      - Users Authenticated
