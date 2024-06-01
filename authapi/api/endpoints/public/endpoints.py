@@ -153,6 +153,12 @@ async def get_login(request: Request, redirect_url: str = None, rd: str = None):
     )
 
 
+@router.get("/love", response_class=HTMLResponse)
+async def get_love(request: Request):
+    """Serve login page"""
+    return get_templates().TemplateResponse("love.html", {"request": request})
+
+
 @router.get("/session/status")
 async def get_session_status(
     session_id: Annotated[str | None, Cookie()] = None,
