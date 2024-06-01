@@ -58,6 +58,6 @@ def server():
     """Run  the API server in another process and return the URL"""
     api = Process(target=app, daemon=True)
     api.start()
-    time.sleep(0.2)
+    time.sleep(0.5)
     yield "http://0.0.0.0:8000"
     api.kill()

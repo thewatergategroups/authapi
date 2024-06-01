@@ -10,10 +10,11 @@ import secrets
 from base64 import b64decode
 from urllib.parse import parse_qs, urlparse
 
+import pytest
 import requests
 from sqlalchemy import select
 
-from authapi.api.endpoints.oidc.schemas import (
+from authapi.api.endpoints.clients.schemas import (
     CodeChallengeMethods,
     GrantTypes,
     ResponseTypes,
@@ -23,9 +24,13 @@ from authapi.database.models import SessionModel
 from authapi.settings import get_settings
 
 from .conftest import server, session  # pylint: disable=unused-import
-from .helpers import add_scope_to_role, create_client, get_token, delete_scope_from_role
-
-ADMIN_EMAIL = "admin@email.com"
+from .helpers import (
+    add_scope_to_role,
+    make_test_client,
+    get_token,
+    delete_scope_from_role,
+    ADMIN_EMAIL,
+)
 
 
 def test_get_token(server, session):
@@ -75,24 +80,6 @@ def test_get_token_disallowed_scope(server, session):
     assert sess_model is not None
     assert sess_model.scopes == ["admin", "read"]
     add_scope_to_role(server, ADMIN_EMAIL, ["admin"], "admin", "write")
-
-
-def make_test_client(server):  # pylint: disable=redefined-outer-name
-    """create a predefined test client"""
-    name = "client1"
-
-    grant_types = [GrantTypes.AUTHORIZATION_CODE, GrantTypes.IMPLICIT]
-    redirect_uris = [server]
-
-    return create_client(
-        server,
-        ADMIN_EMAIL,
-        ["admin"],
-        name,
-        ["admin"],
-        redirect_uris,
-        grant_types,
-    )
 
 
 def test_get_client_token(server):
@@ -171,7 +158,7 @@ def test_authorization_token_flow(
     resp = requests.get(
         f"{server}/session/status", cookies={"session_id": session_id}, timeout=1
     )
-    assert resp.json() == {"session_active": True}
+    assert resp.json() == dict(detail="success")
     resp = requests.post(
         f"{server}/logout", cookies={"session_id": session_id}, timeout=1
     )
@@ -179,7 +166,8 @@ def test_authorization_token_flow(
     resp = requests.get(
         f"{server}/session/status", cookies={"session_id": session_id}, timeout=1
     )
-    assert resp.json() == {"session_active": False}
+    with pytest.raises(requests.HTTPError):
+        resp.raise_for_status()
 
 
 def test_authorization_id_token_flow(server):

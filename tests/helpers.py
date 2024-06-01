@@ -4,9 +4,11 @@ Reusable functions for testing
 
 import requests
 
-from authapi.api.endpoints.oidc.schemas import ClientAddBody, ClientType, GrantTypes
-from authapi.api.endpoints.public.schemas import UserLoginBody
+from authapi.api.endpoints.clients.schemas import ClientAddBody, ClientType, GrantTypes
+from authapi.api.endpoints.public.users.schemas import UserLoginBody
 from authapi.schemas import Alg
+
+ADMIN_EMAIL = "admin@email.com"
 
 
 def get_token(url: str, email: str, scopes: list[str]):
@@ -23,7 +25,7 @@ def get_token(url: str, email: str, scopes: list[str]):
         timeout=1,
         allow_redirects=False,
     )
-    return response.cookies.get("id_token"), response.cookies.get("session_id")
+    return response.json().get("id_token"), response.json().get("session_id")
 
 
 def delete_scope_from_role(
@@ -32,7 +34,7 @@ def delete_scope_from_role(
     """delete scope from role"""
     _, session_id = get_token(url, token_email, token_scopes)
     response = requests.delete(
-        f"{url}/roles/scopes",
+        f"{url}/roles/role/scopes",
         params=dict(role_id=role_id, scope_id=scope_id),
         cookies={"session_id": session_id},
         timeout=1,
@@ -51,7 +53,7 @@ def add_scope_to_role(
     """add scope to role"""
     _, session_id = get_token(url, token_email, token_scopes)
     response = requests.post(
-        f"{url}/roles/scopes",
+        f"{url}/roles/role/scopes",
         json=dict(role_id=role_id, scope_id=scope_id),
         cookies={"session_id": session_id},
         timeout=1,
@@ -73,7 +75,7 @@ def create_client(
     _, session_id = get_token(url, token_email, token_scopes)
 
     response = requests.post(
-        f"{url}/clients/add",
+        f"{url}/clients/client",
         json=ClientAddBody(
             name=client_name,
             description="a test client",
@@ -82,7 +84,25 @@ def create_client(
             roles=client_roles,
             type=client_type,
         ).model_dump(),
-        cookies={"session_id": session_id},
+        cookies=dict(session_id=session_id),
         timeout=1,
     )
     return response.json()
+
+
+def make_test_client(url: str):
+    """create a predefined test client"""
+    name = "client1"
+
+    grant_types = [GrantTypes.AUTHORIZATION_CODE, GrantTypes.IMPLICIT]
+    redirect_uris = [url]
+
+    return create_client(
+        url,
+        ADMIN_EMAIL,
+        ["admin"],
+        name,
+        ["admin"],
+        redirect_uris,
+        grant_types,
+    )

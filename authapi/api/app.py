@@ -11,9 +11,17 @@ from fastapi.staticfiles import StaticFiles
 from yumi import setup_logging
 
 from ..settings import get_settings
-from .endpoints import oidc, password, public, scopes
+from .endpoints import clients, users, public, scopes, roles
 
-routers = [public.router, scopes.router, password.router, oidc.router]
+routers = [
+    public.oauth2.router,
+    public.users.router,
+    public.general.router,
+    scopes.router,
+    users.router,
+    clients.router,
+    roles.router,
+]
 
 
 def create_app() -> FastAPI:
@@ -25,7 +33,7 @@ def create_app() -> FastAPI:
         title="Auth Api",
         description="Jwks Authentication API",
         version="1.0",
-        docs_url=None,
+        # docs_url=None,
         redoc_url=None,
     )
     app.add_middleware(

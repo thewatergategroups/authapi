@@ -1,6 +1,4 @@
-version: "3.9"
 services:
-
   authapi: 
     image: ghcr.io/thewatergategroups/authapi
     command: python -m authapi api

@@ -1,5 +1,5 @@
 """
-Endpoints to manipulate users
+User Endpoints
 Requires admin permissions
 """
 
@@ -12,31 +12,47 @@ from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 from yumi import UserInfo
 
-from ....database.models import (
-    RoleModel,
-    RoleScopeMapModel,
-    UserModel,
-    UserRoleMapModel,
-)
+from ....database.models import UserModel, UserRoleMapModel
 from ....deps import get_async_session
 from ...tools import blake2b_hash
 from ...validator import session_has_admin_scope
 
-from .schemas import (
-    AddUserRoleBody,
-    RoleAddBody,
-    RoleScopesBody,
-    UserAddBody,
-    UserUpdateBody,
-)
+from .schemas import AddUserRoleBody, UserAddBody, UserUpdateBody
 
 router = APIRouter(
-    tags=["users"],
+    tags=["Users Authenticated"],
+    prefix="/users",
     dependencies=[Depends(session_has_admin_scope())],
 )
 
 
-@router.post("/users/user")
+async def get_user_roles(user_id: UUID, session: AsyncSession):
+    """Get User roles"""
+    return (
+        await session.scalars(
+            select(UserRoleMapModel.role_id).where(UserRoleMapModel.user_id == user_id)
+        )
+    ).all()
+
+
+@router.get("")
+async def get_users(
+    session: AsyncSession = Depends(get_async_session),
+):
+    """get all users"""
+    users = (await session.scalars(select(UserModel))).all()
+    response = list()
+    for user in users:
+        response.append(
+            {
+                **user.as_dict(included_keys=user.get_all_keys(["pwd_hash"])),
+                "roles": await get_user_roles(user.id_, session),
+            }
+        )
+    return response
+
+
+@router.post("/user")
 async def create_user(
     data: UserAddBody,
     session: AsyncSession = Depends(get_async_session),
@@ -64,7 +80,7 @@ async def create_user(
     return dict(detail="success")
 
 
-@router.patch("/users/user")
+@router.patch("/user")
 async def update_user(
     data: UserUpdateBody,
     session: AsyncSession = Depends(get_async_session),
@@ -97,7 +113,7 @@ async def update_user(
     return dict(detail="success")
 
 
-@router.delete("/users/user")
+@router.delete("/user")
 async def delete_user(
     user_email: str,
     session: AsyncSession = Depends(get_async_session),
@@ -114,24 +130,7 @@ async def delete_user(
     return dict(detail="success")
 
 
-@router.get("/users")
-async def get_users(
-    session: AsyncSession = Depends(get_async_session),
-):
-    """get all users"""
-    users = (await session.scalars(select(UserModel))).all()
-    response = list()
-    for user in users:
-        response.append(
-            {
-                **user.as_dict(included_keys=user.get_all_keys(["pwd_hash"])),
-                "roles": await get_user_roles(user.id_, session),
-            }
-        )
-    return response
-
-
-@router.get("/users/me")
+@router.get("/me")
 async def get_me(
     session: AsyncSession = Depends(get_async_session),
     user_info: UserInfo = Depends(session_has_admin_scope()),
@@ -149,7 +148,7 @@ async def get_me(
     }
 
 
-@router.post("/users/user/roles")
+@router.post("/user/roles")
 async def add_user_role(
     data: AddUserRoleBody,
     session: AsyncSession = Depends(get_async_session),
@@ -162,94 +161,4 @@ async def add_user_role(
         .on_conflict_do_nothing()
     )
 
-    return dict(detail="success")
-
-
-async def get_user_roles(user_id: UUID, session: AsyncSession):
-    """Get User roles"""
-    return (
-        await session.scalars(
-            select(UserRoleMapModel.role_id).where(UserRoleMapModel.user_id == user_id)
-        )
-    ).all()
-
-
-@router.get("/roles")
-async def get_roles(session: AsyncSession = Depends(get_async_session)):
-    """get roles"""
-    response = list()
-    roles = (await session.scalars(select(RoleModel))).all()
-    for role in roles:
-        scopes = await session.scalars(
-            select(RoleScopeMapModel).where(RoleScopeMapModel.role_id == role.id_)
-        )
-        response.append(dict(id_=role.id_, scopes=[scope.scope_id for scope in scopes]))
-
-    return response
-
-
-@router.delete("/roles/role")
-async def delete_role(role_id: str, session: AsyncSession = Depends(get_async_session)):
-    """delete roles"""
-    await session.execute(delete(RoleModel).where(RoleModel.id_ == role_id))
-    return dict(detail="success")
-
-
-@router.post("/roles/role")
-async def add_role(
-    body: RoleAddBody,
-    session: AsyncSession = Depends(get_async_session),
-):
-    """Add role with scopes"""
-    await session.execute(insert(RoleModel).values(id_=body.role_id))
-    stmt = (
-        insert(RoleScopeMapModel)
-        .values([dict(scope_id=scope, role_id=body.role_id) for scope in body.scopes])
-        .on_conflict_do_nothing()
-    )
-    await session.execute(stmt)
-    return dict(detail="success")
-
-
-@router.post("/roles/role/scopes")
-async def add_role_scopes(
-    data: RoleScopesBody,
-    session: AsyncSession = Depends(get_async_session),
-):
-    """add role scopes"""
-    await session.execute(
-        insert(RoleScopeMapModel).values(scope_id=data.scope_id, role_id=data.role_id)
-    )
-    return dict(detail="success")
-
-
-@router.get("/roles/role/scopes")
-async def get_role_scopes(
-    role_id: str,
-    session: AsyncSession = Depends(get_async_session),
-):
-    """get user scopes"""
-    scopes = (
-        await session.scalars(
-            select(RoleScopeMapModel.scope_id).where(
-                RoleScopeMapModel.role_id == role_id
-            )
-        )
-    ).all()
-    return scopes
-
-
-@router.delete("/roles/role/scopes")
-async def get_role_scope(
-    role_id: str,
-    scope_id: str,
-    session: AsyncSession = Depends(get_async_session),
-):
-    """get user scopes"""
-    await session.execute(
-        delete(RoleScopeMapModel).where(
-            RoleScopeMapModel.role_id == role_id,
-            RoleScopeMapModel.scope_id == scope_id,
-        )
-    )
     return dict(detail="success")

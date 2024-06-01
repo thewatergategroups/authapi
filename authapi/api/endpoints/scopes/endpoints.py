@@ -15,12 +15,12 @@ from .schemas import ScopeBody
 
 router = APIRouter(
     prefix="/scopes",
-    tags=["scopes"],
+    tags=["Scopes Authenticated"],
     dependencies=[Depends(session_has_admin_scope())],
 )
 
 
-@router.post("/add")
+@router.post("/scope")
 async def add_scope(
     data: ScopeBody, session: AsyncSession = Depends(get_async_session)
 ):

@@ -9,20 +9,6 @@ from pydantic import BaseModel
 from ....schemas import Alg
 
 
-class RoleScopesBody(BaseModel):
-    """Add user scope request body"""
-
-    role_id: str
-    scope_id: str
-
-
-class RoleAddBody(BaseModel):
-    """Initial role add body"""
-
-    role_id: str
-    scopes: list[str]
-
-
 class UserUpdateBody(BaseModel):
     """Update user request body"""
 
