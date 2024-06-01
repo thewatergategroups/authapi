@@ -36,7 +36,7 @@ router = APIRouter(
 )
 
 
-@router.post("/add")
+@router.post("/client")
 async def create_client(
     data: ClientAddBody, session: AsyncSession = Depends(get_async_session)
 ):
@@ -93,12 +93,11 @@ async def create_client(
 @router.get("")
 async def get_clients(session: AsyncSession = Depends(get_async_session)):
     """Get existing clients"""
+    clients = (await session.scalars(select(ClientModel.id_))).all()
+    return [await get_client(client, session) for client in clients]
 
-    users = (await session.scalars(select(ClientModel.id_, ClientModel.name))).all()
-    return users
 
-
-@router.post("/roles")
+@router.post("/client/role")
 async def add_client_role(
     data: ClientScopesBody,
     session: AsyncSession = Depends(get_async_session),
@@ -112,29 +111,23 @@ async def add_client_role(
     return {"detail": "success"}
 
 
-@router.get("/roles")
-async def get_client_scopes(
+@router.get("/client/roles")
+async def get_client_roles(
     client_id: UUID,
     session: AsyncSession = Depends(get_async_session),
 ):
     """get client scopes"""
-    scopes = (
+    roles = (
         await session.scalars(
-            select(RoleScopeMapModel.scope_id)
-            .where(
-                RoleScopeMapModel.role_id.in_(
-                    select(ClientRoleMapModel.role_id).where(
-                        ClientRoleMapModel.client_id == client_id
-                    )
-                ),
+            select(ClientRoleMapModel.role_id).where(
+                ClientRoleMapModel.client_id == client_id
             )
-            .order_by(RoleScopeMapModel.scope_id)
         )
     ).all()
-    return scopes
+    return roles
 
 
-@router.delete("/roles")
+@router.delete("/client/role")
 async def delete_client_scopes(
     data: ClientScopesBody,
     session: AsyncSession = Depends(get_async_session),
@@ -149,7 +142,7 @@ async def delete_client_scopes(
     return {"detail": "success"}
 
 
-@router.post("/redirect")
+@router.post("/client/redirect")
 async def add_client_redirects(
     data: ClientRedirectBody,
     session: AsyncSession = Depends(get_async_session),
@@ -166,7 +159,7 @@ async def add_client_redirects(
     return {"detail": "success"}
 
 
-@router.get("/redirects")
+@router.get("/client/redirects")
 async def get_client_redirects(
     client_id: UUID,
     session: AsyncSession = Depends(get_async_session),
@@ -182,7 +175,7 @@ async def get_client_redirects(
     return scopes
 
 
-@router.delete("/redirect")
+@router.delete("/client/redirect")
 async def delete_client_redirects(
     data: ClientRedirectBody,
     session: AsyncSession = Depends(get_async_session),
@@ -197,7 +190,7 @@ async def delete_client_redirects(
     return {"detail": "success"}
 
 
-@router.post("/grants")
+@router.post("/client/grants")
 async def add_client_grants(
     data: ClientGrantBody,
     session: AsyncSession = Depends(get_async_session),
@@ -214,7 +207,7 @@ async def add_client_grants(
     return {"detail": "success"}
 
 
-@router.get("/grants")
+@router.get("client/grants")
 async def get_client_grants(
     client_id: UUID,
     session: AsyncSession = Depends(get_async_session),
@@ -230,7 +223,7 @@ async def get_client_grants(
     return scopes
 
 
-@router.delete("/grants")
+@router.delete("/client/grants")
 async def delete_client_grants(
     data: ClientGrantBody,
     session: AsyncSession = Depends(get_async_session),
@@ -256,12 +249,12 @@ async def get_client(
     )
     if not client:
         raise HTTPException(404, "client not found")
-    scopes = await get_client_scopes(client_id, session)
+    roles = await get_client_roles(client_id, session)
     redirects = await get_client_redirects(client_id, session)
     grants = await get_client_grants(client_id, session)
     return {
         **client.as_dict(included_keys=["id_", "type", "name", "description"]),
-        "scopes": scopes,
+        "roles": roles,
         "redirect_uris": redirects,
         "grant_types": grants,
     }
