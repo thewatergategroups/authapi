@@ -33,7 +33,7 @@ def create_app() -> FastAPI:
         title="Auth Api",
         description="Jwks Authentication API",
         version="1.0",
-        # docs_url=None,
+        docs_url=None,
         redoc_url=None,
     )
     app.add_middleware(

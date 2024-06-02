@@ -1760,3 +1760,18 @@ paths:
       summary: Add User Role
       tags:
       - Users Authenticated
+tags:
+- description: Operations related to OAuth2 Public
+  name: OAuth2 Public
+- description: Operations related to Users Public
+  name: Users Public
+- description: Operations related to Users Authenticated
+  name: Users Authenticated
+- description: Operations related to Clients Authenticated
+  name: Clients Authenticated
+- description: Operations related to Scopes Authenticated
+  name: Scopes Authenticated
+- description: Operations related to Roles Authenticated
+  name: Roles Authenticated
+- description: Operations related to General Public
+  name: General Public
