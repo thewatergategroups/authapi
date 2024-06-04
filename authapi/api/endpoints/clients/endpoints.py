@@ -5,10 +5,10 @@ Requires Admin credentials
 
 from uuid import UUID, uuid4
 
-from fastapi import Depends, HTTPException
+from fastapi import Depends, HTTPException, status
 from fastapi.responses import JSONResponse
 from fastapi.routing import APIRouter
-from sqlalchemy import delete, exists, select
+from sqlalchemy import delete, exists, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -24,6 +24,7 @@ from ...validator import session_has_admin_scope
 from .schemas import (
     ClientAddBody,
     ClientGrantBody,
+    ClientPatchBody,
     ClientRedirectBody,
     ClientScopesBody,
 )
@@ -64,6 +65,36 @@ async def get_client(
     }
 
 
+async def upsert_client_mappings(
+    client_id: str,
+    grant_types: list[str],
+    redirect_uris: list[str],
+    roles: list[str],
+    session: AsyncSession,
+):
+    """Upsert client mappings"""
+    await session.execute(
+        insert(ClientGrantMapModel)
+        .values([dict(client_id=client_id, grant_type=gt.value) for gt in grant_types])
+        .on_conflict_do_nothing()
+    )
+    await session.execute(
+        insert(ClientRoleMapModel)
+        .values([dict(client_id=client_id, role_id=role) for role in roles])
+        .on_conflict_do_nothing()
+    )
+    await session.execute(
+        insert(ClientRedirectsModel)
+        .values(
+            [
+                dict(client_id=client_id, redirect_uri=redirect)
+                for redirect in redirect_uris
+            ]
+        )
+        .on_conflict_do_nothing()
+    )
+
+
 @router.post("/client")
 async def create_client(
     data: ClientAddBody, session: AsyncSession = Depends(get_async_session)
@@ -76,7 +107,7 @@ async def create_client(
         select(exists(ClientModel)).where(ClientModel.id_ == id_)
     )
     if us_exists:
-        raise HTTPException(500, "Please try again")
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Client already exists")
 
     await session.execute(
         insert(ClientModel).values(
@@ -87,23 +118,8 @@ async def create_client(
             description=data.description,
         )
     )
-    await session.execute(
-        insert(ClientGrantMapModel).values(
-            [{"client_id": id_, "grant_type": gt.value} for gt in data.grant_types]
-        )
-    )
-    await session.execute(
-        insert(ClientRoleMapModel).values(
-            [{"client_id": id_, "role_id": role} for role in data.roles]
-        )
-    )
-    await session.execute(
-        insert(ClientRedirectsModel).values(
-            [
-                {"client_id": id_, "redirect_uri": redirect}
-                for redirect in data.redirect_uris
-            ]
-        )
+    await upsert_client_mappings(
+        id_, data.grant_types, data.redirect_uris, data.roles, session
     )
     return JSONResponse(
         {
@@ -116,6 +132,31 @@ async def create_client(
         },
         201,
     )
+
+
+@router.patch("/client")
+async def update_client(
+    data: ClientPatchBody, session: AsyncSession = Depends(get_async_session)
+):
+    """Update a clients information"""
+    us_exists = await session.scalar(
+        select(exists(ClientModel)).where(ClientModel.id_ == data.id_)
+    )
+    if not us_exists:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Client doesn't exists")
+    await session.execute(
+        update(ClientModel)
+        .where(ClientModel.id_ == data.id_)
+        .values(
+            type=data.type.value,
+            name=data.name,
+            description=data.description,
+        )
+    )
+    await upsert_client_mappings(
+        data.id_, data.grant_types, data.redirect_uris, data.roles, session
+    )
+    return dict(detail="success")
 
 
 @router.post("/client/role")

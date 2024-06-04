@@ -56,6 +56,18 @@ class ClientAddBody(BaseModel):
     roles: list[str]
 
 
+class ClientPatchBody(BaseModel):
+    """Add Client endpoint body"""
+
+    id_: UUID
+    name: str | None = None
+    type: ClientType | None = None
+    description: str | None = None
+    redirect_uris: list[str] | None = None
+    grant_types: list[GrantTypes] | None = None
+    roles: list[str] | None = None
+
+
 class OidcTokenBody(BaseModel):
     """Generate client token body"""
 
