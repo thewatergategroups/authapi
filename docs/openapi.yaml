@@ -137,6 +137,52 @@ components:
       - grants
       title: ClientGrantBody
       type: object
+    ClientPatchBody:
+      description: Add Client endpoint body
+      properties:
+        description:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Description
+        grant_types:
+          anyOf:
+          - items:
+              $ref: '#/components/schemas/GrantTypes'
+            type: array
+          - type: 'null'
+          title: Grant Types
+        id_:
+          format: uuid
+          title: 'Id '
+          type: string
+        name:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Name
+        redirect_uris:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Redirect Uris
+        roles:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Roles
+        type:
+          anyOf:
+          - $ref: '#/components/schemas/ClientType'
+          - type: 'null'
+      required:
+      - id_
+      title: ClientPatchBody
+      type: object
     ClientRedirectBody:
       description: Add client redirect body
       properties:
@@ -467,6 +513,47 @@ paths:
                 $ref: '#/components/schemas/HTTPValidationError'
           description: Validation Error
       summary: Get Client
+      tags:
+      - Clients Authenticated
+    patch:
+      description: Update a clients information
+      operationId: update_client_clients_client_patch
+      parameters:
+      - in: header
+        name: user-agent
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User-Agent
+      - in: cookie
+        name: session_id
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Session Id
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ClientPatchBody'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Update Client
       tags:
       - Clients Authenticated
     post:
@@ -1761,17 +1848,17 @@ paths:
       tags:
       - Users Authenticated
 tags:
-- description: Operations related to OAuth2 Public
-  name: OAuth2 Public
-- description: Operations related to Users Public
-  name: Users Public
-- description: Operations related to Users Authenticated
-  name: Users Authenticated
-- description: Operations related to Clients Authenticated
-  name: Clients Authenticated
-- description: Operations related to Scopes Authenticated
-  name: Scopes Authenticated
-- description: Operations related to Roles Authenticated
-  name: Roles Authenticated
 - description: Operations related to General Public
   name: General Public
+- description: Operations related to OAuth2 Public
+  name: OAuth2 Public
+- description: Operations related to Clients Authenticated
+  name: Clients Authenticated
+- description: Operations related to Roles Authenticated
+  name: Roles Authenticated
+- description: Operations related to Scopes Authenticated
+  name: Scopes Authenticated
+- description: Operations related to Users Authenticated
+  name: Users Authenticated
+- description: Operations related to Users Public
+  name: Users Public
