@@ -33,11 +33,18 @@ from ..helpers import redirect_on_unauthorized
 router = APIRouter(tags=["Users Public"])
 
 
+@router.get("/logged_in", response_class=HTMLResponse)
+async def get_logged_in(request: Request, _=Depends(validate_session)):
+    """Serve logged in page"""
+    return get_templates().TemplateResponse("logged_in.html", {"request": request})
+
+
 @router.get("/login", response_class=HTMLResponse)
 async def get_login(request: Request, redirect_url: str = None, rd: str = None):
     """Serve login page"""
     return get_templates().TemplateResponse(
-        "login.html", {"request": request, "redirect_url": redirect_url or rd}
+        "login.html",
+        {"request": request, "redirect_url": redirect_url or rd or "/logged_in"},
     )
 
 
