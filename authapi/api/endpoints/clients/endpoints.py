@@ -122,14 +122,7 @@ async def create_client(
         id_, data.grant_types, data.redirect_uris, data.roles, session
     )
     return JSONResponse(
-        {
-            "client_id": str(id_),
-            "client_secret": secret,
-            "redirect_uris": data.redirect_uris,
-            "grant_types": data.grant_types,
-            "roles": data.roles,
-            "type": data.type,
-        },
+        {"client_id": str(id_), "client_secret": secret},
         201,
     )
 
@@ -156,6 +149,29 @@ async def update_client(
     await upsert_client_mappings(
         data.id_, data.grant_types, data.redirect_uris, data.roles, session
     )
+    return dict(detail="success")
+
+
+@router.delete("/client")
+async def delete_client(id_: UUID, session: AsyncSession = Depends(get_async_session)):
+    """delete client"""
+    us_exists = await session.scalar(
+        select(exists(ClientModel)).where(ClientModel.id_ == id_)
+    )
+    if not us_exists:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Client doesn't exists")
+    ### Need to add cascade
+    await session.execute(
+        delete(ClientRedirectsModel).where(ClientRedirectsModel.client_id == id_)
+    )
+    await session.execute(
+        delete(ClientGrantMapModel).where(ClientGrantMapModel.client_id == id_)
+    )
+    await session.execute(
+        delete(ClientRoleMapModel).where(ClientRoleMapModel.client_id == id_)
+    )
+    ###
+    await session.execute(delete(ClientModel).where(ClientModel.id_ == id_))
     return dict(detail="success")
 
 

@@ -337,6 +337,13 @@ components:
         postcode:
           title: Postcode
           type: string
+        roles:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Roles
         surname:
           title: Surname
           type: string
@@ -381,6 +388,13 @@ components:
           - type: string
           - type: 'null'
           title: Postcode
+        roles:
+          anyOf:
+          - items:
+              type: string
+            type: array
+          - type: 'null'
+          title: Roles
         surname:
           anyOf:
           - type: string
@@ -473,6 +487,48 @@ paths:
       tags:
       - Clients Authenticated
   /clients/client:
+    delete:
+      description: delete client
+      operationId: delete_client_clients_client_delete
+      parameters:
+      - in: query
+        name: id_
+        required: true
+        schema:
+          format: uuid
+          title: 'Id '
+          type: string
+      - in: header
+        name: user-agent
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User-Agent
+      - in: cookie
+        name: session_id
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Session Id
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Delete Client
+      tags:
+      - Clients Authenticated
     get:
       description: get specific client information
       operationId: get_client_clients_client_get
@@ -1000,6 +1056,43 @@ paths:
       summary: Get Jwks
       tags:
       - General Public
+  /logged_in:
+    get:
+      description: Serve logged in page
+      operationId: get_logged_in_logged_in_get
+      parameters:
+      - in: header
+        name: user-agent
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User-Agent
+      - in: cookie
+        name: session_id
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Session Id
+      responses:
+        '200':
+          content:
+            text/html:
+              schema:
+                type: string
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Get Logged In
+      tags:
+      - Users Public
   /login:
     get:
       description: Serve login page
@@ -1850,15 +1943,15 @@ paths:
 tags:
 - description: Operations related to General Public
   name: General Public
-- description: Operations related to OAuth2 Public
-  name: OAuth2 Public
-- description: Operations related to Clients Authenticated
-  name: Clients Authenticated
 - description: Operations related to Roles Authenticated
   name: Roles Authenticated
-- description: Operations related to Scopes Authenticated
-  name: Scopes Authenticated
-- description: Operations related to Users Authenticated
-  name: Users Authenticated
 - description: Operations related to Users Public
   name: Users Public
+- description: Operations related to Users Authenticated
+  name: Users Authenticated
+- description: Operations related to OAuth2 Public
+  name: OAuth2 Public
+- description: Operations related to Scopes Authenticated
+  name: Scopes Authenticated
+- description: Operations related to Clients Authenticated
+  name: Clients Authenticated
