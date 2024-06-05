@@ -19,6 +19,7 @@ class UserUpdateBody(BaseModel):
     postcode: str | None = None
     first_name: str | None = None
     surname: str | None = None
+    roles: list[str] | None = None
 
 
 class UserAddBody(BaseModel):
@@ -31,6 +32,7 @@ class UserAddBody(BaseModel):
     first_name: str
     surname: str
     alg: Alg = Alg.EC
+    roles: list[str] | None = None
 
 
 class AddUserRoleBody(BaseModel):

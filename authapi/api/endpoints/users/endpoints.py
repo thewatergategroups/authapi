@@ -65,9 +65,10 @@ async def create_user(
         raise HTTPException(400, "User already Exists")
 
     passwd = blake2b_hash(data.password.strip())
+    user_id = uuid4()
     await session.execute(
         insert(UserModel).values(
-            id_=uuid4(),
+            id_=user_id,
             email=data.email.strip(),
             pwd_hash=passwd,
             first_name=data.first_name.strip(),
@@ -76,6 +77,12 @@ async def create_user(
             postcode=data.postcode.strip(),
         )
     )
+    if data.roles is not None:
+        await session.execute(
+            insert(UserRoleMapModel)
+            .values([dict(user_id=user_id, role_id=role_id) for role_id in data.roles])
+            .on_conflict_do_nothing()
+        )
 
     return dict(detail="success")
 
@@ -86,10 +93,10 @@ async def update_user(
     session: AsyncSession = Depends(get_async_session),
 ):
     """update user endpoint"""
-    us_exists = await session.scalar(
-        select(exists(UserModel)).where(UserModel.email == data.email.strip())
+    user_id = await session.scalar(
+        select(UserModel.id_).where(UserModel.email == data.email.strip())
     )
-    if not us_exists:
+    if user_id is None:
         raise HTTPException(400, "User doesn't Exists")
     values = dict()
     if data.password is not None:
@@ -109,6 +116,12 @@ async def update_user(
     await session.execute(
         update(UserModel).where(UserModel.email == data.email.strip()).values(**values)
     )
+    if data.roles is not None:
+        await session.execute(
+            insert(UserRoleMapModel)
+            .values([dict(user_id=user_id, role_id=role_id) for role_id in data.roles])
+            .on_conflict_do_nothing()
+        )
 
     return dict(detail="success")
 
