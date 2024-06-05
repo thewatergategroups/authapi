@@ -77,7 +77,7 @@ async def create_user(
             postcode=data.postcode.strip(),
         )
     )
-    if data.roles is not None:
+    if data.roles:
         await session.execute(
             insert(UserRoleMapModel)
             .values([dict(user_id=user_id, role_id=role_id) for role_id in data.roles])
@@ -116,7 +116,7 @@ async def update_user(
     await session.execute(
         update(UserModel).where(UserModel.email == data.email.strip()).values(**values)
     )
-    if data.roles is not None:
+    if data.roles:
         await session.execute(
             insert(UserRoleMapModel)
             .values([dict(user_id=user_id, role_id=role_id) for role_id in data.roles])
