@@ -138,7 +138,9 @@ async def delete_user(
     if user_id is None:
         raise HTTPException(400, "User doesn't Exists")
     ### temporary hack - need to recreate migrations to get cascading behaviour
-    await session.execute(delete(UserRoleMapModel).where(UserRoleMapModel.user_id))
+    await session.execute(
+        delete(UserRoleMapModel).where(UserRoleMapModel.user_id == user_id)
+    )
     ###
     await session.execute(delete(UserModel).where(UserModel.id_ == user_id))
     return dict(detail="success")
