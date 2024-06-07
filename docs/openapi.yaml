@@ -274,11 +274,11 @@ components:
       - id_token
       title: ResponseTypes
       type: string
-    RoleAddBody:
+    RoleAddPatchBody:
       description: Initial role add body
       properties:
-        role_id:
-          title: Role Id
+        id_:
+          title: 'Id '
           type: string
         scopes:
           items:
@@ -286,9 +286,9 @@ components:
           title: Scopes
           type: array
       required:
-      - role_id
+      - id_
       - scopes
-      title: RoleAddBody
+      title: RoleAddPatchBody
       type: object
     RoleScopesBody:
       description: Add user scope request body
@@ -1338,10 +1338,10 @@ paths:
       operationId: delete_role_roles_role_delete
       parameters:
       - in: query
-        name: role_id
+        name: id_
         required: true
         schema:
-          title: Role Id
+          title: 'Id '
           type: string
       - in: header
         name: user-agent
@@ -1374,6 +1374,47 @@ paths:
       summary: Delete Role
       tags:
       - Roles Authenticated
+    patch:
+      description: Add role with scopes
+      operationId: update_role_roles_role_patch
+      parameters:
+      - in: header
+        name: user-agent
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User-Agent
+      - in: cookie
+        name: session_id
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Session Id
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoleAddPatchBody'
+        required: true
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Update Role
+      tags:
+      - Roles Authenticated
     post:
       description: Add role with scopes
       operationId: add_role_roles_role_post
@@ -1398,7 +1439,7 @@ paths:
         content:
           application/json:
             schema:
-              $ref: '#/components/schemas/RoleAddBody'
+              $ref: '#/components/schemas/RoleAddPatchBody'
         required: true
       responses:
         '200':
@@ -1582,6 +1623,47 @@ paths:
       tags:
       - Scopes Authenticated
   /scopes/scope:
+    delete:
+      description: delete existing scope
+      operationId: delete_scope_scopes_scope_delete
+      parameters:
+      - in: query
+        name: id_
+        required: true
+        schema:
+          title: 'Id '
+          type: string
+      - in: header
+        name: user-agent
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: User-Agent
+      - in: cookie
+        name: session_id
+        required: false
+        schema:
+          anyOf:
+          - type: string
+          - type: 'null'
+          title: Session Id
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: {}
+          description: Successful Response
+        '422':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/HTTPValidationError'
+          description: Validation Error
+      summary: Delete Scope
+      tags:
+      - Scopes Authenticated
     post:
       description: Add new scope if it doesnt exist
       operationId: add_scope_scopes_scope_post
@@ -1941,17 +2023,17 @@ paths:
       tags:
       - Users Authenticated
 tags:
-- description: Operations related to Users Authenticated
-  name: Users Authenticated
-- description: Operations related to Users Public
-  name: Users Public
-- description: Operations related to OAuth2 Public
-  name: OAuth2 Public
-- description: Operations related to Clients Authenticated
-  name: Clients Authenticated
-- description: Operations related to Scopes Authenticated
-  name: Scopes Authenticated
 - description: Operations related to Roles Authenticated
   name: Roles Authenticated
 - description: Operations related to General Public
   name: General Public
+- description: Operations related to Clients Authenticated
+  name: Clients Authenticated
+- description: Operations related to Users Authenticated
+  name: Users Authenticated
+- description: Operations related to Scopes Authenticated
+  name: Scopes Authenticated
+- description: Operations related to OAuth2 Public
+  name: OAuth2 Public
+- description: Operations related to Users Public
+  name: Users Public

@@ -12,8 +12,8 @@ class RoleScopesBody(BaseModel):
     scope_id: str
 
 
-class RoleAddBody(BaseModel):
+class RoleAddPatchBody(BaseModel):
     """Initial role add body"""
 
-    role_id: str
+    id_: str
     scopes: list[str]

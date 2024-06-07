@@ -42,6 +42,7 @@ async def get_scopes(session: AsyncSession = Depends(get_async_session)):
     return (await session.scalars(select(ScopesModel))).all()
 
 
+@router.delete("/scope")
 async def delete_scope(id_: str, session: AsyncSession = Depends(get_async_session)):
     """delete existing scope"""
     does_exists = await session.scalar(

@@ -3,9 +3,9 @@ Role Endpoints
 Requires admin permissions
 """
 
-from fastapi import Depends
+from fastapi import Depends, HTTPException
 from fastapi.routing import APIRouter
-from sqlalchemy import delete, select
+from sqlalchemy import delete, exists, select, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -13,7 +13,7 @@ from ....database.models import RoleModel, RoleScopeMapModel
 from ....deps import get_async_session
 from ...validator import session_has_admin_scope
 
-from .schemas import RoleAddBody, RoleScopesBody
+from .schemas import RoleAddPatchBody, RoleScopesBody
 
 router = APIRouter(
     tags=["Roles Authenticated"],
@@ -37,22 +37,51 @@ async def get_roles(session: AsyncSession = Depends(get_async_session)):
 
 
 @router.delete("/role")
-async def delete_role(role_id: str, session: AsyncSession = Depends(get_async_session)):
+async def delete_role(id_: str, session: AsyncSession = Depends(get_async_session)):
     """delete roles"""
-    await session.execute(delete(RoleModel).where(RoleModel.id_ == role_id))
+    await session.execute(
+        delete(RoleScopeMapModel).where(RoleScopeMapModel.role_id == id_)
+    )
+    await session.execute(delete(RoleModel).where(RoleModel.id_ == id_))
     return dict(detail="success")
 
 
 @router.post("/role")
 async def add_role(
-    body: RoleAddBody,
+    data: RoleAddPatchBody,
     session: AsyncSession = Depends(get_async_session),
 ):
     """Add role with scopes"""
-    await session.execute(insert(RoleModel).values(id_=body.role_id))
+    does_exists = await session.scalar(
+        select(exists(RoleModel)).where(RoleModel.id_ == data.id_)
+    )
+    if does_exists:
+        raise HTTPException(400, "Role already Exists")
+
+    await session.execute(insert(RoleModel).values(id_=data.id_))
     stmt = (
         insert(RoleScopeMapModel)
-        .values([dict(scope_id=scope, role_id=body.role_id) for scope in body.scopes])
+        .values([dict(scope_id=scope, role_id=data.id_) for scope in data.scopes])
+        .on_conflict_do_nothing()
+    )
+    await session.execute(stmt)
+    return dict(detail="success")
+
+
+@router.patch("/role")
+async def update_role(
+    data: RoleAddPatchBody,
+    session: AsyncSession = Depends(get_async_session),
+):
+    """Add role with scopes"""
+    does_exists = await session.scalar(
+        select(exists(RoleModel)).where(RoleModel.id_ == data.id_)
+    )
+    if not does_exists:
+        raise HTTPException(400, "Role does not exist")
+    stmt = (
+        insert(RoleScopeMapModel)
+        .values([dict(scope_id=scope, role_id=data.id_) for scope in data.scopes])
         .on_conflict_do_nothing()
     )
     await session.execute(stmt)
