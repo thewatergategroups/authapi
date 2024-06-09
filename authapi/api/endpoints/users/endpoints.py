@@ -16,7 +16,7 @@ from ....database.models import UserModel, UserRoleMapModel
 from ....deps import get_async_session
 from ...tools import blake2b_hash
 from ...validator import session_has_admin_scope
-
+from ..roles.endpoints import update_role
 from .schemas import AddUserRoleBody, UserAddBody, UserUpdateBody
 
 router = APIRouter(
@@ -117,6 +117,12 @@ async def update_user(
         update(UserModel).where(UserModel.email == data.email.strip()).values(**values)
     )
     if data.roles:
+        await session.execute(
+            delete(UserRoleMapModel).where(
+                UserRoleMapModel.user_id == data.id_,
+                UserRoleMapModel.role_id.notin_(data.roles),
+            )
+        )
         await session.execute(
             insert(UserRoleMapModel)
             .values([dict(user_id=user_id, role_id=role_id) for role_id in data.roles])

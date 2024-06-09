@@ -79,6 +79,13 @@ async def update_role(
     )
     if not does_exists:
         raise HTTPException(400, "Role does not exist")
+    await session.execute(
+        delete(RoleScopeMapModel).where(
+            RoleScopeMapModel.role_id == data.id_,
+            RoleScopeMapModel.scope_id.notin_(data.scopes),
+        )
+    )
+
     stmt = (
         insert(RoleScopeMapModel)
         .values([dict(scope_id=scope, role_id=data.id_) for scope in data.scopes])

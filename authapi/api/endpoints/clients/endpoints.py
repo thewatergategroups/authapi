@@ -73,16 +73,40 @@ async def upsert_client_mappings(
     session: AsyncSession,
 ):
     """Upsert client mappings"""
+
+    await session.execute(
+        delete(ClientGrantMapModel).where(
+            ClientGrantMapModel.client_id == client_id,
+            ClientGrantMapModel.grant_type.notin_(grant_types),
+        )
+    )
+
     await session.execute(
         insert(ClientGrantMapModel)
         .values([dict(client_id=client_id, grant_type=gt.value) for gt in grant_types])
         .on_conflict_do_nothing()
     )
+
+    await session.execute(
+        delete(ClientRoleMapModel).where(
+            ClientRoleMapModel.client_id == client_id,
+            ClientRoleMapModel.role_id.notin_(roles),
+        )
+    )
+
     await session.execute(
         insert(ClientRoleMapModel)
         .values([dict(client_id=client_id, role_id=role) for role in roles])
         .on_conflict_do_nothing()
     )
+
+    await session.execute(
+        delete(ClientRedirectsModel).where(
+            ClientRedirectsModel.client_id == client_id,
+            ClientRedirectsModel.redirect_uri.notin_(redirect_uris),
+        )
+    )
+
     await session.execute(
         insert(ClientRedirectsModel)
         .values(
