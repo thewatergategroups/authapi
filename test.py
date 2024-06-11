@@ -9,7 +9,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-SERVER_URL = "http://localhost:8000"
+SERVER_URL = "https://auth.thewatergategroups.com"
 
 
 def get_headers():
@@ -23,10 +23,9 @@ def get_token():
     """Get user token"""
     resp = requests.post(
         f"{SERVER_URL}/login",
-        json={
-            "username": "admin",
+        data={
+            "email": "admin@email.com",
             "password": os.environ["ADMIN_PASSWORD"],
-            "scopes": ["admin"],
             "alg": "ES256",
         },
         timeout=2,
@@ -70,22 +69,5 @@ def get_clients():
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="entrypoint options.")
 
-    # Add arguments and options to the parser
-    parser.add_argument(
-        "entrypoint",
-        help="which entrypoint to use.",
-        choices=["get-token", "add-client", "get-client", "get-clients"],
-    )
-    args = parser.parse_args()
-
-    if args.entrypoint == "get-token":
-        pprint(get_token())
-    elif args.entrypoint == "add-client":
-        pprint(create_client())
-    elif args.entrypoint == "get-client":
-        client_id = input("enter client id:")
-        pprint(get_client(client_id))
-    elif args.entrypoint == "get-clients":
-        pprint(get_clients())
+    pprint(get_token())
