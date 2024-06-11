@@ -115,6 +115,7 @@ def validate_client_token(
         user = get_jwt_client().validate_jwt(
             auth.credentials,
             issuer=get_settings().jwt_config.jwks_server_url,
+            audience=get_settings().jwt_config.jwks_server_url,
         )
         if Scopes.OPENID.value not in user.scopes:
             raise HTTPException(403, "openid scope not present")
