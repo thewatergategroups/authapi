@@ -14,7 +14,7 @@ SERVER_URL = "https://auth.thewatergategroups.com"
 
 def get_headers():
     """Get token header"""
-    token = get_token()["token"]
+    token = get_token()["access_token"]
     headers = {"Authorization": f"Bearer {token}"}
     return headers
 
@@ -33,41 +33,15 @@ def get_token():
     return resp.json()
 
 
-def create_client():
-    """Request to create a client"""
-    resp = requests.post(
-        f"{SERVER_URL}/clients/create",
-        headers=get_headers(),
-        json={
-            "name": "ciaran",
-            "type": "confidential",
-            "description": "ciarans test client",
-            "redirect_uris": [f"{SERVER_URL}/users/user"],
-            "grant_types": ["authorization_code"],
-            "scopes": ["admin"],
-        },
-        timeout=2,
-    )
-    return resp.json()
-
-
-def get_client(cl_id: str):
-    """get an existing client"""
+def get_params():
     resp = requests.get(
-        f"{SERVER_URL}/clients/client",
-        params={"client_id": cl_id},
+        "https://resource.thewatergategroups.com/parameters",
         headers=get_headers(),
         timeout=2,
     )
-    return resp.json()
-
-
-def get_clients():
-    """get all clients"""
-    resp = requests.get(f"{SERVER_URL}/clients", headers=get_headers(), timeout=2)
     return resp.json()
 
 
 if __name__ == "__main__":
 
-    pprint(get_token())
+    pprint(get_params())
