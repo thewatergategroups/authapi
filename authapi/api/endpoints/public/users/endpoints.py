@@ -90,12 +90,17 @@ async def login(
     if Scopes.GROUPS in allowed_scopes:
         groups = roles
     id_token = build_user_token(data.email, alg=data.alg, groups=groups)
-    response = JSONResponse(dict(id_token=id_token, session_id=session_id), 200)
+    token = build_user_token(
+        data.email, alg=data.alg, groups=groups, scopes=allowed_scopes
+    )
+    response = JSONResponse(dict(access_token=token), 200)
     domain = get_settings().jwt_config.jwks_server_url.split(".", 1)[1]
     response.set_cookie(
         "session_id",
         session_id,
-        expires=expires_at,  # secure=True, httponly=True
+        expires=expires_at,
+        secure=True,
+        # httponly=True,
         domain=domain,
     )
     if data.redirect_url:
@@ -104,7 +109,9 @@ async def login(
     response.set_cookie(
         "id_token",
         id_token,
-        expires=expires_at,  #  secure=True, httponly=True
+        expires=expires_at,
+        secure=True,
+        # httponly=True,
         domain=domain,
     )
     return response
