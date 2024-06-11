@@ -33,7 +33,7 @@ def build_client_token(
     scopes: list[str],
     alg: Alg,
     username: str | None = None,
-    audience: str = "local",
+    audience: str = "",
 ):
     """build a client token based on the passed in information"""
     now = datetime.now()
@@ -42,7 +42,7 @@ def build_client_token(
     payload = Jwt(
         sub=client_id,
         exp=expires_in,
-        aud=audience,
+        aud=audience or get_settings().jwt_config.jwks_server_url,
         iss=get_settings().jwt_config.jwks_server_url,
         iat=now.timestamp(),
         scopes=scopes,

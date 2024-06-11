@@ -14,7 +14,7 @@ def build_user_token(
     email: str,
     scopes: list[str] | None = None,
     alg: Alg = Alg.EC,
-    audience: str = "local",
+    audience: str = "",
     nonce: str | None = None,
     groups: list[str] | None = None,
 ):
@@ -22,9 +22,10 @@ def build_user_token(
     now = datetime.now()
     payload = Jwt(
         sub=email,
+        email=email,
         nonce=nonce,
         exp=(now + timedelta(hours=1)).timestamp(),
-        aud=audience,
+        aud=audience or get_settings().jwt_config.jwks_server_url,
         iss=get_settings().jwt_config.jwks_server_url,
         iat=now.timestamp(),
         groups=groups,
