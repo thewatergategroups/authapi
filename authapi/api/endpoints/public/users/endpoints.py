@@ -125,7 +125,9 @@ async def logout(
 ):
     """Log out of the application"""
     await SessionModel.delete(session_id, session)
-    return {"detail": "Success"}
+    response = JSONResponse(dict(detail="success"), 200)
+    response.delete_cookie("session_id")
+    return response
 
 
 @router.get("/session/status")
