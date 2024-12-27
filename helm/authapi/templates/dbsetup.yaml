@@ -1,0 +1,43 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: authapi-db-setup
+  annotations:
+    argocd.argoproj.io/sync-wave: "-4"
+    argocd.argoproj.io/hook: Sync
+spec:
+  ttlSecondsAfterFinished: 20
+  template:
+    spec:
+      imagePullSecrets:
+        - name: {{ .Values.regCredName }} 
+      containers:
+      - name: authapi-db-setup
+        volumeMounts:
+          - mountPath: /secrets
+            name: authapi
+        securityContext: null
+        image: {{ .Values.imageName }}
+        imagePullPolicy: Always
+        resources:
+          limits:
+            memory: 500Mi
+          requests:
+            memory: 500Mi
+        command:
+          - bash 
+          - start.sh
+          - python
+          - -m
+          - authapi
+          - db
+          - upgrade
+      restartPolicy: Never
+      volumes:
+        - name: authapi
+          secret:
+            optional: false
+            secretName: authapi
+  backoffLimit: 1
+---

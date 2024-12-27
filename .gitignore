@@ -1,0 +1,14 @@
+**/__pycache__/*
+**/.env
+**/.ruff_cache
+**/.mypy_cache
+**/.venv
+**/.vscode
+**/figs
+**/logs/*
+**/pg_data
+**/pgadmin-data
+**/certs/*
+**/secret_vals.yaml
+**/template.yaml
+**/argocd/*

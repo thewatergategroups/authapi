@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logged In</title>
+    <!-- Bootstrap CSS CDN -->
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <!-- Favicon - Replace 'lock.svg' with the path to your lock icon image -->
+    <link rel="icon" href="/static/lock.svg" type="image/svg+xml">
+    <!-- Font Awesome CDN for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css">
+    <!-- Custom CSS -->
+    <style>
+        body {
+            background-color: #f8f9fa; /* Light gray background */
+            font-family: 'Roboto', sans-serif; /* Use Roboto font */
+            overflow: hidden; /* Prevent scrolling */
+        }
+        .login-container {
+            margin-top: 0px; /* Increased margin-top */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+        }
+        .card {
+            background-color: #ffffff; /* White background */
+            box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1); /* Shadow effect */
+        }
+        .check-icon {
+            font-size: 6rem;
+            color: #28a745; /* Green color for tick icon */
+            margin-bottom: 20px;
+        }
+        .card-title {
+            color: #343a40; /* Dark gray for title */
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="row justify-content-center login-container">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-body text-center">
+                    <i class="fas fa-check-circle check-icon"></i>
+                    <h2 class="card-title">Logged In Successfully</h2>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Bootstrap JS and its dependencies -->
+<script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.2/dist/umd/popper.min.js"></script>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+</body>
+</html>
